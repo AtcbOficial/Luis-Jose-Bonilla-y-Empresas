@@ -972,7 +972,10 @@ details.overdue-box, summary.overdue-sec{
 .list-card.overdue-row.flash-hl,
 .overdue-row.flash-hl,
 details.collapse.flash-hl,
-.collapse.flash-hl{
+.collapse.flash-hl,
+.edit-panel.flash-hl,
+.card.flash-hl,
+.flash-hl{
   animation:flashHl 1.5s ease-in-out 10!important; /* ~15s */
   border-color:#2ecc71!important;
   background:linear-gradient(180deg,rgba(46,204,113,.25) 0%,#18222e 100%)!important;
@@ -3947,21 +3950,57 @@ function importJsonFile(file) {
 
 /* ---------- Navegación ---------- */
 /** Lleva el scroll al formulario / bloque de edición (cómodo al editar) */
-function scrollToEdit(elOrId) {
+/** Abre details padres, hace scroll y resalta en verde ~15s */
+function focusUI(elOrId, opts) {
+  opts = opts || {};
   try {
-    const el = typeof elOrId === 'string' ? document.getElementById(elOrId) : elOrId;
-    if (!el) return;
-    const main = document.querySelector('main');
-    if (!main) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      return;
+    var el = null;
+    if (typeof elOrId === 'string') {
+      el = document.getElementById(elOrId) || document.querySelector(elOrId);
+    } else {
+      el = elOrId;
     }
-    // Asegurar visible tras cambiar de pestaña
-    requestAnimationFrame(() => {
-      const top = el.getBoundingClientRect().top - main.getBoundingClientRect().top + main.scrollTop - 8;
-      main.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
-    });
+    if (!el) return;
+    // Abrir todos los <details> padres (y el propio si es details)
+    try {
+      var node = el;
+      while (node && node !== document.body) {
+        if (node.tagName === 'DETAILS') node.open = true;
+        node = node.parentElement;
+      }
+    } catch (e0) {}
+    // Abrir panel de edición si aplica
+    try {
+      if (el.classList && el.classList.contains('edit-panel')) el.classList.add('open');
+    } catch (e1) {}
+    // Scroll
+    try {
+      var main = document.querySelector('main');
+      if (main) {
+        requestAnimationFrame(function () {
+          try {
+            var top = el.getBoundingClientRect().top - main.getBoundingClientRect().top + main.scrollTop - 12;
+            main.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+          } catch (e2) {
+            try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e3) {}
+          }
+        });
+      } else {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    } catch (e4) {}
+    // Guiño verde
+    if (opts.noFlash) return;
+    try {
+      el.classList.remove('flash-hl');
+      void el.offsetWidth;
+      el.classList.add('flash-hl');
+      setTimeout(function () { try { el.classList.remove('flash-hl'); } catch (e5) {} }, opts.ms || 15000);
+    } catch (e6) {}
   } catch (e) {}
+}
+function scrollToEdit(elOrId) {
+  focusUI(elOrId, { ms: 15000 });
 }
 
 /* ========== NAVEGACIÓN ==========
@@ -5235,15 +5274,7 @@ function detailActGo() {
   if (kind === 'cliente') return goToCliente(id);
 }
 function flashCard(sel) {
-  try {
-    const el = typeof sel === 'string' ? document.querySelector(sel) : sel;
-    if (!el) return;
-    el.classList.remove('flash-hl');
-    void el.offsetWidth;
-    el.classList.add('flash-hl');
-    try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
-    setTimeout(function () { try { el.classList.remove('flash-hl'); } catch (e) {} }, 15000);
-  } catch (e) {}
+  focusUI(sel, { ms: 15000 });
 }
 function goToProdStock(id) {
   const p = (products || []).find(function (x) { return +x.id === +id; });
@@ -9852,12 +9883,10 @@ function updateYearCloseBanner() {
 }
 function goToArchiveYear() {
   show('archivo');
-  const sec = document.getElementById('archivoMantenimiento');
-  if (sec) {
-    sec.open = true;
-    setTimeout(() => { try { sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {} }, 150);
-  }
-  updateYearCloseBanner();
+  setTimeout(function () {
+    var sec = document.getElementById('archivoYears') || document.getElementById('yearArchive') || document.querySelector('#archivo details');
+    if (sec) focusUI(sec);
+  }, 100);
 }
 async function archivePreviousYear() {
   const year = pendingArchiveYear();
@@ -10060,7 +10089,7 @@ function editContEntry(id) {
   if (ft) ft.textContent = '✏️ movimiento';
   const reg = document.getElementById('contRegistro');
   if (reg && !reg.open) reg.open = true;
-  scrollToEdit('contRegistro');
+  focusUI(reg || 'contRegistro');
   setTimeout(() => { try { document.getElementById('contConcept').focus(); } catch (e) {} }, 300);
   toast('Editando movimiento');
 }
@@ -10160,7 +10189,13 @@ async function saveContEntry() {
   if (document.getElementById('contDate')) document.getElementById('contDate').value = today();
 
 const homeGo = document.getElementById('homeGoContab');
-if (homeGo) homeGo.onclick = () => show('contabilidad');
+if (homeGo) homeGo.onclick = function () {
+  show('contabilidad');
+  setTimeout(function () {
+    var el = document.getElementById('contRegistro') || document.getElementById('contabilidad');
+    if (el) focusUI(el);
+  }, 100);
+};
 })();
 
 
