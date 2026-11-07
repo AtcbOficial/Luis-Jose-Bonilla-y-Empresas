@@ -458,7 +458,16 @@ nav button.active{color:var(--accent)}
 .caja-inline-row input{flex:0 0 auto;width:140px;max-width:42%;text-align:right}
 .caja-days{display:inline-block;margin-left:6px;font-size:10px;font-weight:600;color:var(--accent);text-transform:none;letter-spacing:0;white-space:nowrap}
 .money-summary{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
-.money-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px 10px;width:100%}
+#guardadasMoneyBox,
+#stockMoneyBox,
+#insumosMoneyBox{
+  width:100%;
+  max-width:100%;
+  display:block;
+  box-sizing:border-box;
+}
+.money-summary{width:100%;box-sizing:border-box}
+.money-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px 10px;width:100%}
 .money-summary-grid .ms-item{background:linear-gradient(180deg,#1a2430,#121922);border:1px solid var(--border);border-radius:10px;padding:8px 10px;text-align:center;min-width:0}
 .money-summary-grid .ms-item .label{font-size:10px;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
 .money-summary-grid .ms-item .stat{font-size:15px;font-weight:700}
@@ -537,6 +546,9 @@ nav button.active{color:var(--accent)}
   /* Inicio y Contab: todos los apartados mismo ancho (barra retraída igual) */
   #home.view.active > details.collapse,
   #contabilidad.view.active > details.collapse,
+  #guardadasMoneyBox,
+  #stockMoneyBox,
+  #insumosMoneyBox,
   #guardadas .card,
   #stock .card,
   #stock #prodForm,
@@ -958,7 +970,9 @@ details.overdue-box, summary.overdue-sec{
 /* Guiño verde 15s (gana sobre vencido rojo mientras dura) */
 .list-card.flash-hl,
 .list-card.overdue-row.flash-hl,
-.overdue-row.flash-hl{
+.overdue-row.flash-hl,
+details.collapse.flash-hl,
+.collapse.flash-hl{
   animation:flashHl 1.5s ease-in-out 10!important; /* ~15s */
   border-color:#2ecc71!important;
   background:linear-gradient(180deg,rgba(46,204,113,.25) 0%,#18222e 100%)!important;
@@ -11137,7 +11151,25 @@ function bindFxUI() {
   const b4 = document.getElementById('btnFxApiTest');
   const b5 = document.getElementById('btnFxAdd');
   if (b1) b1.onclick = function () { fxFetchApi(false); };
-  if (b2) b2.onclick = function () { show('archivo'); try { document.getElementById('fxArchivo').open = true; } catch (e) {} };
+  if (b2) b2.onclick = function () {
+    show('archivo');
+    setTimeout(function () {
+      try {
+        var el = document.getElementById('fxArchivo');
+        if (!el) return;
+        el.open = true;
+        try { renderFxArchivo(); } catch (e2) {}
+        if (typeof flashCard === 'function') flashCard(el);
+        else {
+          el.classList.remove('flash-hl');
+          void el.offsetWidth;
+          el.classList.add('flash-hl');
+          try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e3) {}
+          setTimeout(function () { try { el.classList.remove('flash-hl'); } catch (e4) {} }, 15000);
+        }
+      } catch (e) { console.warn(e); }
+    }, 80);
+  };
   if (b3) b3.onclick = function () {
     ensureFx();
     fxCollectEditList();
