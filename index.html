@@ -457,7 +457,12 @@ nav button.active{color:var(--accent)}
 .caja-inline-row .label{flex:1;margin:0;font-size:11px;letter-spacing:.02em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
 .caja-inline-row input{flex:0 0 auto;width:140px;max-width:42%;text-align:right}
 .caja-days{display:inline-block;margin-left:6px;font-size:10px;font-weight:600;color:var(--accent);text-transform:none;letter-spacing:0;white-space:nowrap}
-.money-summary{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.money-summary{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
+.money-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px 10px;width:100%}
+.money-summary-grid .ms-item{background:linear-gradient(180deg,#1a2430,#121922);border:1px solid var(--border);border-radius:10px;padding:8px 10px;text-align:center;min-width:0}
+.money-summary-grid .ms-item .label{font-size:10px;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.money-summary-grid .ms-item .stat{font-size:15px;font-weight:700}
+.cli-count-badge,.prov-count-badge{font-size:12px;font-weight:600;color:var(--accent);margin-left:6px}
 .money-summary .stat{font-size:18px;font-weight:700}
 .hdr-money{font-size:12px;font-weight:600;color:var(--accent);margin-left:6px}
 .fx-list{display:flex;flex-direction:column;gap:6px}
@@ -1072,7 +1077,7 @@ header #empresaSelect{
       <div class="body">
         <div id="homeFxList" class="fx-list"></div>
         <div class="actions" style="margin-top:8px">
-          <button type="button" id="btnFxRefresh" class="success sm">🔄 Actualizar API</button>
+          <button type="button" id="btnFxRefresh" class="success sm">🔄 Actualizar APIs</button>
           <button type="button" id="btnFxGoArchivo" class="warn sm">✏️ Editar en Archivo</button>
         </div>
         <p class="hint" id="homeFxStatus" style="margin:6px 0 0"></p>
@@ -1483,8 +1488,17 @@ header #empresaSelect{
     <details class="collapse" id="guardadasMoneyBox" open>
       <summary>💰 Por cobrar <span id="guardadasMoneyHint" class="hdr-money"></span></summary>
       <div class="body money-summary">
-        <div><div class="label">Pendiente de cobro</div><div id="guardadasMoneyVal" class="stat expense">$ 0,00</div></div>
-        <div><div class="label">Facturas con saldo</div><div id="guardadasMoneyCount" class="stat balance">0</div></div>
+        <div class="money-summary-grid">
+          <div class="ms-item"><div class="label">Por cobrar $</div><div id="guardadasMoneyVal" class="stat expense">$ 0,00</div></div>
+          <div class="ms-item"><div class="label">Con saldo</div><div id="guardadasMoneyCount" class="stat balance">0</div></div>
+          <div class="ms-item"><div class="label">En ejecución</div><div id="guardadasCntPend" class="stat balance">0</div></div>
+          <div class="ms-item"><div class="label">En aprobación</div><div id="guardadasCntCot" class="stat balance">0</div></div>
+          <div class="ms-item"><div class="label">Finalizadas</div><div id="guardadasCntFin" class="stat income">0</div></div>
+          <div class="ms-item"><div class="label">Total guardadas</div><div id="guardadasCntTot" class="stat balance">0</div></div>
+          <div class="ms-item"><div class="label">Facturas</div><div id="guardadasCntFact" class="stat balance">0</div></div>
+          <div class="ms-item"><div class="label">Proyectos</div><div id="guardadasCntProy" class="stat balance">0</div></div>
+          <div class="ms-item"><div class="label">Venta total</div><div id="guardadasVentaTot" class="stat balance">$ 0,00</div></div>
+        </div>
       </div>
     </details>
     <div class="card">
@@ -1512,8 +1526,15 @@ header #empresaSelect{
     <details class="collapse" id="stockMoneyBox" open>
       <summary>💰 Invertido en stock <span id="stockMoneyHint" class="hdr-money"></span></summary>
       <div class="body money-summary">
-        <div><div class="label">Valor en stock (costo × cant.)</div><div id="stockMoneyVal" class="stat balance">$ 0,00</div></div>
-        <div><div class="label">Ítems con existencias</div><div id="stockMoneyCount" class="stat balance">0</div></div>
+        <div class="money-summary-grid">
+          <div class="ms-item"><div class="label">Invertido $</div><div id="stockMoneyVal" class="stat balance">$ 0,00</div></div>
+          <div class="ms-item"><div class="label">Con existencias</div><div id="stockMoneyCount" class="stat balance">0</div></div>
+          <div class="ms-item"><div class="label">Productos anotados</div><div id="stockCntTot" class="stat balance">0</div></div>
+          <div class="ms-item"><div class="label">Productos lab</div><div id="stockCntLab" class="stat balance">0</div></div>
+          <div class="ms-item"><div class="label">Sin lab</div><div id="stockCntNoLab" class="stat balance">0</div></div>
+          <div class="ms-item"><div class="label">Unidades stock</div><div id="stockUnits" class="stat balance">0</div></div>
+          <div class="ms-item"><div class="label">Valor venta pot.</div><div id="stockVentaPot" class="stat income">$ 0,00</div></div>
+        </div>
       </div>
     </details>
 
@@ -1587,8 +1608,15 @@ header #empresaSelect{
     <details class="collapse" id="insumosMoneyBox" open>
       <summary>💰 Invertido en insumos <span id="insumosMoneyHint" class="hdr-money"></span></summary>
       <div class="body money-summary">
-        <div><div class="label">Valor en insumos (costo × cant.)</div><div id="insumosMoneyVal" class="stat balance">$ 0,00</div></div>
-        <div><div class="label">Ítems con existencias</div><div id="insumosMoneyCount" class="stat balance">0</div></div>
+        <div class="money-summary-grid">
+          <div class="ms-item"><div class="label">Invertido $</div><div id="insumosMoneyVal" class="stat balance">$ 0,00</div></div>
+          <div class="ms-item"><div class="label">Con existencias</div><div id="insumosMoneyCount" class="stat balance">0</div></div>
+          <div class="ms-item"><div class="label">Insumos anotados</div><div id="insumosCntTot" class="stat balance">0</div></div>
+          <div class="ms-item"><div class="label">Químicos (g)</div><div id="insumosCntG" class="stat balance">0</div></div>
+          <div class="ms-item"><div class="label">Implementos (ud)</div><div id="insumosCntUd" class="stat balance">0</div></div>
+          <div class="ms-item"><div class="label">Stock total g</div><div id="insumosStockG" class="stat balance">0</div></div>
+          <div class="ms-item"><div class="label">Stock total ud</div><div id="insumosStockUd" class="stat balance">0</div></div>
+        </div>
       </div>
     </details>
 
@@ -1728,7 +1756,7 @@ header #empresaSelect{
       <div class="sticky-btns">
         <button type="button" id="btnNewCli" class="sm success">➕ Nuevo</button>
       </div>
-      <div class="section-title" style="margin:0 0 12px">👥 Clientes</div>
+      <div class="section-title" style="margin:0 0 12px">👥 Clientes <span id="cliCountBadge" class="cli-count-badge"></span></div>
       <div class="sticky-search">
         <input id="cliSearch" placeholder="Filtrar nombre, doc o tel...">
       </div>
@@ -1759,7 +1787,7 @@ header #empresaSelect{
       <div class="sticky-btns">
         <button type="button" id="btnNewProv" class="sm success">➕ Nuevo</button>
       </div>
-      <div class="section-title" style="margin:0 0 12px">🏭 Proveedores</div>
+      <div class="section-title" style="margin:0 0 12px">🏭 Proveedores <span id="provCountBadge" class="prov-count-badge"></span></div>
       <div class="sticky-search">
         <input id="provSearch" placeholder="Filtrar nombre, doc o tel...">
       </div>
@@ -1980,23 +2008,23 @@ header #empresaSelect{
     <details class="collapse" id="fxArchivo">
       <summary>💱 Tasa de cambios (monedas y API)</summary>
       <div class="body">
-        <p class="hint">Crea monedas (USD, EUR…), tasa manual en COP y API de respaldo. Si la API falla se usan las tasas editadas.</p>
-        <div class="form-row"><label class="label">URL API (JSON con rates)</label>
-          <input id="fxApiUrl" type="url" placeholder="https://api.frankfurter.app/latest?from=USD"></div>
-        <div class="form-row"><label class="label">Moneda base de la API</label>
-          <input id="fxApiBase" placeholder="USD" style="max-width:120px"></div>
+        <p class="hint">Cada moneda tiene su propia API y tasa manual (COP). Si su API falla, se conserva la tasa editada de esa moneda.</p>
         <div class="actions" style="margin-bottom:10px">
-          <button type="button" id="btnFxApiSave" class="success">💾 Guardar API / tasas</button>
-          <button type="button" id="btnFxApiTest" class="print">🔄 Probar API</button>
+          <button type="button" id="btnFxApiSave" class="success">💾 Guardar monedas</button>
+          <button type="button" id="btnFxApiTest" class="print">🔄 Actualizar todas las API</button>
         </div>
         <div id="fxEditList"></div>
         <div class="card" style="margin-top:10px;padding:10px">
           <div class="section-title" style="font-size:13px">➕ Nueva moneda</div>
-          <div class="form-row" style="display:flex;gap:6px;flex-wrap:wrap">
-            <input id="fxNewEmoji" placeholder="💵" style="width:52px">
-            <input id="fxNewCode" placeholder="USD" style="width:70px">
-            <input id="fxNewName" placeholder="Dólar" style="flex:1;min-width:100px">
-            <input id="fxNewRate" type="text" inputmode="decimal" placeholder="Tasa COP" data-money="1" style="width:110px">
+          <div class="form-row" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+            <input id="fxNewEmoji" placeholder="💵" style="width:52px" title="Emoji">
+            <input id="fxNewCode" placeholder="USD" style="width:70px" title="Código">
+            <input id="fxNewName" placeholder="Dólar" style="flex:1;min-width:100px" title="Nombre">
+            <input id="fxNewRate" type="text" inputmode="decimal" placeholder="Tasa COP" data-money="1" style="width:110px" title="Tasa en COP">
+          </div>
+          <div class="form-row" style="margin-bottom:8px">
+            <label class="label">API de esta moneda (URL JSON)</label>
+            <input id="fxNewApi" type="url" placeholder="https://api.frankfurter.app/latest?from=USD" style="width:100%">
           </div>
           <button type="button" id="btnFxAdd" class="success">➕ Agregar moneda</button>
         </div>
@@ -5357,6 +5385,14 @@ function viewCliDetail(id) {
 }
 
 function renderClients() {
+  try {
+    const n = (clients || []).filter(function (c) {
+      return !c.empresa || c.empresa === activeEmpresa;
+    }).length;
+    const b = document.getElementById('cliCountBadge');
+    if (b) b.textContent = '· ' + n + ' anotado' + (n === 1 ? '' : 's');
+  } catch (e) {}
+
   const q = (cliSearch.value || '').toLowerCase().trim();
   const rows = clients
     .filter(c => matchContactQuery(c, q))
@@ -5475,6 +5511,14 @@ function viewProvDetail(id) {
 }
 
 function renderProveedores() {
+  try {
+    const n = (proveedores || []).filter(function (v) {
+      return !v.empresa || v.empresa === activeEmpresa;
+    }).length;
+    const b = document.getElementById('provCountBadge');
+    if (b) b.textContent = '· ' + n + ' anotado' + (n === 1 ? '' : 's');
+  } catch (e) {}
+
   const q = ((document.getElementById('provSearch') || {}).value || '').toLowerCase().trim();
   const list = document.getElementById('provList');
   if (!list) return;
@@ -10806,52 +10850,96 @@ function updateCajaDaysUI() {
   });
 }
 function updateGuardadasMoneyHint() {
-  let porCobrar = 0, n = 0;
+  let porCobrar = 0, nSaldo = 0, nPend = 0, nCot = 0, nFin = 0, nTot = 0, nFact = 0, nProy = 0, ventaTot = 0;
   (invoices || []).forEach(function (inv) {
     if (inv.empresa && inv.empresa !== activeEmpresa) return;
-    if (inv.tipo === 'cotizacion') return;
+    nTot++;
+    if (inv.isProyecto) nProy++; else nFact++;
+    ventaTot += (+inv.total || 0);
+    const tipo = inv.tipo || '';
+    if (tipo === 'pendiente') nPend++;
+    else if (tipo === 'cotizacion') nCot++;
+    else if (tipo === 'cobrada') nFin++;
+    if (tipo === 'cotizacion') return;
     const s = (typeof saldoPendiente === 'function') ? saldoPendiente(inv) : 0;
-    if (s > 0.009) { porCobrar += s; n++; }
+    if (s > 0.009) { porCobrar += s; nSaldo++; }
   });
-  const el = document.getElementById('guardadasMoneyHint');
-  const val = document.getElementById('guardadasMoneyVal');
-  const cnt = document.getElementById('guardadasMoneyCount');
-  if (el) el.textContent = n ? ('· ' + money(porCobrar)) : '· al día';
-  if (val) { val.textContent = money(porCobrar); val.className = 'stat ' + (porCobrar > 0.009 ? 'expense' : 'income'); }
-  if (cnt) cnt.textContent = String(n);
+  const set = function (id, txt, cls) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = txt;
+    if (cls) el.className = 'stat ' + cls;
+  };
+  const hint = document.getElementById('guardadasMoneyHint');
+  if (hint) hint.textContent = nSaldo ? ('· ' + money(porCobrar)) : '· al día';
+  set('guardadasMoneyVal', money(porCobrar), porCobrar > 0.009 ? 'expense' : 'income');
+  set('guardadasMoneyCount', String(nSaldo), 'balance');
+  set('guardadasCntPend', String(nPend), 'balance');
+  set('guardadasCntCot', String(nCot), 'balance');
+  set('guardadasCntFin', String(nFin), 'income');
+  set('guardadasCntTot', String(nTot), 'balance');
+  set('guardadasCntFact', String(nFact), 'balance');
+  set('guardadasCntProy', String(nProy), 'balance');
+  set('guardadasVentaTot', money(ventaTot), 'balance');
 }
 function updateStockMoneyHint() {
-  let inv = 0, n = 0;
+  let invVal = 0, nStock = 0, nTot = 0, nLab = 0, nNoLab = 0, units = 0, ventaPot = 0;
   (products || []).forEach(function (p) {
     if ((p.empresa || activeEmpresa) !== activeEmpresa) return;
+    nTot++;
+    const hasLab = !!(p.lab && typeof p.lab === 'object' && ((p.lab.quim && p.lab.quim.length) || (p.lab.imp && p.lab.imp.length) || +p.lab.ml));
+    if (hasLab) nLab++; else nNoLab++;
     const st = +p.stock || 0;
-    if (st <= 0) return;
     const costo = +p.compra || +p.costo || 0;
-    inv += costo * st;
-    n++;
+    const venta = +p.venta || +p.precio || 0;
+    if (st > 0) {
+      nStock++;
+      units += st;
+      invVal += costo * st;
+      ventaPot += venta * st;
+    }
   });
-  const el = document.getElementById('stockMoneyHint');
-  const val = document.getElementById('stockMoneyVal');
-  const cnt = document.getElementById('stockMoneyCount');
-  if (el) el.textContent = '· ' + money(inv);
-  if (val) val.textContent = money(inv);
-  if (cnt) cnt.textContent = String(n);
+  const set = function (id, txt) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = txt;
+  };
+  const hint = document.getElementById('stockMoneyHint');
+  if (hint) hint.textContent = '· ' + money(invVal);
+  set('stockMoneyVal', money(invVal));
+  set('stockMoneyCount', String(nStock));
+  set('stockCntTot', String(nTot));
+  set('stockCntLab', String(nLab));
+  set('stockCntNoLab', String(nNoLab));
+  set('stockUnits', String(units));
+  set('stockVentaPot', money(ventaPot));
 }
 function updateInsumosMoneyHint() {
-  let inv = 0, n = 0;
+  let invVal = 0, nStock = 0, nTot = 0, nG = 0, nUd = 0, stockG = 0, stockUd = 0;
   (insumos || []).forEach(function (p) {
+    nTot++;
+    const cat = (p.cat === 'implemento') ? 'implemento' : 'quimico';
+    if (cat === 'quimico') nG++; else nUd++;
     const st = +p.stock || +p.cant || 0;
     const costo = +p.compra || +p.costo || +p.precio || 0;
-    if (st <= 0) return;
-    inv += costo * st;
-    n++;
+    if (st > 0) {
+      nStock++;
+      invVal += costo * st;
+      if (cat === 'quimico') stockG += st; else stockUd += st;
+    }
   });
-  const el = document.getElementById('insumosMoneyHint');
-  const val = document.getElementById('insumosMoneyVal');
-  const cnt = document.getElementById('insumosMoneyCount');
-  if (el) el.textContent = '· ' + money(inv);
-  if (val) val.textContent = money(inv);
-  if (cnt) cnt.textContent = String(n);
+  const set = function (id, txt) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = txt;
+  };
+  const hint = document.getElementById('insumosMoneyHint');
+  if (hint) hint.textContent = '· ' + money(invVal);
+  set('insumosMoneyVal', money(invVal));
+  set('insumosMoneyCount', String(nStock));
+  set('insumosCntTot', String(nTot));
+  set('insumosCntG', String(nG));
+  set('insumosCntUd', String(nUd));
+  set('insumosStockG', String(Math.round(stockG * 100) / 100));
+  set('insumosStockUd', String(Math.round(stockUd * 100) / 100));
 }
 function getContMovimientosForView() {
   if (!contViewYear || contViewYear === 'current') return contMovimientos || [];
@@ -10877,19 +10965,25 @@ function onContYearChange() {
 }
 function defaultFxSettings() {
   return {
-    apiUrl: 'https://api.frankfurter.app/latest?from=USD',
-    apiBase: 'USD',
     rates: [
-      { id: 1, emoji: '💵', code: 'USD', name: 'Dólar', rate: 4200 },
-      { id: 2, emoji: '💶', code: 'EUR', name: 'Euro', rate: 4600 }
+      { id: 1, emoji: '💵', code: 'USD', name: 'Dólar', rate: 4200, apiUrl: 'https://api.frankfurter.app/latest?from=USD' },
+      { id: 2, emoji: '💶', code: 'EUR', name: 'Euro', rate: 4600, apiUrl: 'https://api.frankfurter.app/latest?from=EUR' }
     ]
   };
 }
 function ensureFx() {
   if (!settings.fx || typeof settings.fx !== 'object') settings.fx = defaultFxSettings();
   if (!Array.isArray(settings.fx.rates)) settings.fx.rates = defaultFxSettings().rates;
-  if (!settings.fx.apiUrl) settings.fx.apiUrl = defaultFxSettings().apiUrl;
-  if (!settings.fx.apiBase) settings.fx.apiBase = 'USD';
+  // Migrar API global antigua → por moneda
+  const legacyUrl = settings.fx.apiUrl || '';
+  const legacyBase = (settings.fx.apiBase || 'USD').toUpperCase();
+  settings.fx.rates.forEach(function (r) {
+    if (!r.apiUrl) {
+      if (legacyUrl && (r.code || '').toUpperCase() === legacyBase) r.apiUrl = legacyUrl;
+      else if (r.code) r.apiUrl = 'https://api.frankfurter.app/latest?from=' + String(r.code).toUpperCase();
+      else r.apiUrl = '';
+    }
+  });
   return settings.fx;
 }
 function renderHomeFx() {
@@ -10909,19 +11003,20 @@ function renderHomeFx() {
 }
 function renderFxArchivo() {
   ensureFx();
-  const url = document.getElementById('fxApiUrl');
-  const base = document.getElementById('fxApiBase');
-  if (url) url.value = settings.fx.apiUrl || '';
-  if (base) base.value = settings.fx.apiBase || 'USD';
   const list = document.getElementById('fxEditList');
   if (!list) return;
   list.innerHTML = (settings.fx.rates || []).map(function (r, i) {
-    return '<div class="fx-edit-row" data-i="' + i + '">' +
-      '<input class="fx-e-emoji" value="' + escapeHtml(r.emoji || '') + '" style="width:48px">' +
-      '<input class="fx-e-code" value="' + escapeHtml(r.code || '') + '" style="width:64px">' +
-      '<input class="fx-e-name" value="' + escapeHtml(r.name || '') + '" style="flex:1;min-width:80px">' +
-      '<input class="fx-e-rate" type="text" inputmode="decimal" data-money="1" value="' + formatMoneyInput(r.rate || 0) + '" style="width:110px">' +
+    return '<div class="fx-edit-row" data-i="' + i + '" style="flex-direction:column;align-items:stretch;gap:6px;padding:10px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;background:#141a22">' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">' +
+      '<input class="fx-e-emoji" value="' + escapeHtml(r.emoji || '') + '" style="width:48px" title="Emoji">' +
+      '<input class="fx-e-code" value="' + escapeHtml(r.code || '') + '" style="width:64px" title="Código">' +
+      '<input class="fx-e-name" value="' + escapeHtml(r.name || '') + '" style="flex:1;min-width:80px" title="Nombre">' +
+      '<input class="fx-e-rate" type="text" inputmode="decimal" data-money="1" value="' + formatMoneyInput(r.rate || 0) + '" style="width:110px" title="Tasa COP">' +
+      '<button type="button" class="print sm" onclick="fxFetchOne(' + i + ')" title="Actualizar esta API">🔄</button>' +
       '<button type="button" class="danger sm" onclick="fxDeleteRate(' + i + ')">🗑️</button>' +
+      '</div>' +
+      '<div><label class="label" style="font-size:11px">API de ' + escapeHtml(r.code || 'moneda') + '</label>' +
+      '<input class="fx-e-api" type="url" value="' + escapeHtml(r.apiUrl || '') + '" placeholder="https://api.frankfurter.app/latest?from=XXX" style="width:100%"></div>' +
       '</div>';
   }).join('') || '<p class="hint">Sin monedas aún</p>';
   try { if (typeof bindAllMoneyInputs === 'function') bindAllMoneyInputs(); } catch (e) {}
@@ -10936,7 +11031,8 @@ function fxCollectEditList() {
       emoji: (row.querySelector('.fx-e-emoji') || {}).value || '💱',
       code: ((row.querySelector('.fx-e-code') || {}).value || '').trim().toUpperCase(),
       name: ((row.querySelector('.fx-e-name') || {}).value || '').trim(),
-      rate: parseMoney((row.querySelector('.fx-e-rate') || {}).value)
+      rate: parseMoney((row.querySelector('.fx-e-rate') || {}).value),
+      apiUrl: ((row.querySelector('.fx-e-api') || {}).value || '').trim()
     });
   });
   settings.fx.rates = out.filter(function (r) { return r.code; });
@@ -10954,14 +11050,17 @@ function fxAddRate() {
   fxCollectEditList();
   const code = ((document.getElementById('fxNewCode') || {}).value || '').trim().toUpperCase();
   if (!code) return toast('Código requerido (USD, EUR…)');
+  let api = ((document.getElementById('fxNewApi') || {}).value || '').trim();
+  if (!api) api = 'https://api.frankfurter.app/latest?from=' + code;
   settings.fx.rates.push({
     id: Date.now(),
     emoji: ((document.getElementById('fxNewEmoji') || {}).value || '💱').trim() || '💱',
     code: code,
     name: ((document.getElementById('fxNewName') || {}).value || code).trim(),
-    rate: parseMoney((document.getElementById('fxNewRate') || {}).value)
+    rate: parseMoney((document.getElementById('fxNewRate') || {}).value),
+    apiUrl: api
   });
-  ['fxNewEmoji','fxNewCode','fxNewName','fxNewRate'].forEach(function (id) {
+  ['fxNewEmoji','fxNewCode','fxNewName','fxNewRate','fxNewApi'].forEach(function (id) {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   renderFxArchivo();
@@ -10969,44 +11068,67 @@ function fxAddRate() {
   try { autoSave(); } catch (e) {}
   toast('Moneda agregada');
 }
-async function fxFetchApi(silent) {
+async function fxFetchOne(index, silent) {
   ensureFx();
+  fxCollectEditList();
+  const r = settings.fx.rates[index];
+  if (!r) return false;
   const status = document.getElementById('homeFxStatus');
-  const apiUrl = settings.fx.apiUrl || defaultFxSettings().apiUrl;
+  const apiUrl = (r.apiUrl || '').trim();
+  if (!apiUrl) {
+    if (!silent) toast('Sin API para ' + (r.code || ''));
+    return false;
+  }
   try {
-    if (status) status.textContent = 'Consultando API…';
+    if (status) status.textContent = 'Consultando ' + (r.code || '') + '…';
     const res = await fetch(apiUrl, { cache: 'no-store' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     const ratesObj = data.rates || data.conversion_rates || {};
-    const base = (settings.fx.apiBase || data.base || 'USD').toUpperCase();
-    let updated = 0;
-    (settings.fx.rates || []).forEach(function (r) {
-      const code = (r.code || '').toUpperCase();
-      if (!code) return;
-      if (base === 'USD' && code === 'USD' && ratesObj.COP) {
-        r.rate = +ratesObj.COP; updated++;
-      } else if (base === 'USD' && ratesObj.COP && ratesObj[code] && code !== 'USD') {
-        r.rate = Math.round((+ratesObj.COP / +ratesObj[code]) * 100) / 100; updated++;
-      }
-    });
-    if (!updated && ratesObj.COP) {
-      const usd = (settings.fx.rates || []).find(function (r) { return (r.code || '').toUpperCase() === 'USD'; });
-      if (usd) { usd.rate = +ratesObj.COP; updated = 1; }
+    const code = (r.code || '').toUpperCase();
+    const base = (data.base || code).toUpperCase();
+    let ok = false;
+    if (ratesObj.COP) {
+      // frankfurter from CODE → rates.COP = COP per 1 CODE
+      r.rate = +ratesObj.COP;
+      ok = true;
+    } else if (ratesObj[code] && base === 'COP') {
+      r.rate = +ratesObj[code];
+      ok = true;
     }
+    if (!ok) throw new Error('JSON sin tasa COP usable');
     renderHomeFx();
     renderFxArchivo();
     try { autoSave(); } catch (e) {}
-    const msg = updated ? ('API OK · ' + updated + ' tasa(s) · ' + new Date().toLocaleString()) : 'API OK pero sin coincidencias (se mantienen manuales)';
+    const msg = (r.code || '') + ' OK · ' + money(r.rate) + ' · ' + new Date().toLocaleString();
     if (status) status.textContent = msg;
     if (!silent) toast(msg);
     return true;
   } catch (e) {
-    const msg = 'API falló · tasas manuales. ' + (e.message || e);
+    const msg = (r.code || 'Moneda') + ' API falló · se mantiene tasa manual. ' + (e.message || e);
     if (status) status.textContent = msg;
     if (!silent) toast(msg);
     return false;
   }
+}
+async function fxFetchApi(silent) {
+  ensureFx();
+  fxCollectEditList();
+  const status = document.getElementById('homeFxStatus');
+  const rates = settings.fx.rates || [];
+  if (!rates.length) {
+    if (!silent) toast('No hay monedas');
+    return false;
+  }
+  let ok = 0, fail = 0;
+  for (let i = 0; i < rates.length; i++) {
+    const r = await fxFetchOne(i, true);
+    if (r) ok++; else fail++;
+  }
+  const msg = 'APIs: ' + ok + ' ok' + (fail ? (', ' + fail + ' fallaron (manual)') : '') + ' · ' + new Date().toLocaleString();
+  if (status) status.textContent = msg;
+  if (!silent) toast(msg);
+  return ok > 0;
 }
 function bindFxUI() {
   const b1 = document.getElementById('btnFxRefresh');
@@ -11018,19 +11140,13 @@ function bindFxUI() {
   if (b2) b2.onclick = function () { show('archivo'); try { document.getElementById('fxArchivo').open = true; } catch (e) {} };
   if (b3) b3.onclick = function () {
     ensureFx();
-    settings.fx.apiUrl = ((document.getElementById('fxApiUrl') || {}).value || '').trim();
-    settings.fx.apiBase = ((document.getElementById('fxApiBase') || {}).value || 'USD').trim().toUpperCase();
     fxCollectEditList();
     try { autoSave(); } catch (e) {}
-    toast('API y tasas guardadas');
+    toast('Monedas guardadas');
     renderHomeFx();
+    renderFxArchivo();
   };
-  if (b4) b4.onclick = function () {
-    ensureFx();
-    settings.fx.apiUrl = ((document.getElementById('fxApiUrl') || {}).value || '').trim();
-    settings.fx.apiBase = ((document.getElementById('fxApiBase') || {}).value || 'USD').trim().toUpperCase();
-    fxFetchApi(false);
-  };
+  if (b4) b4.onclick = function () { fxFetchApi(false); };
   if (b5) b5.onclick = fxAddRate;
   const ys = document.getElementById('contYearSelect');
   if (ys) ys.onchange = onContYearChange;
