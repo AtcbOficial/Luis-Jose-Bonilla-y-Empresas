@@ -11015,8 +11015,12 @@ function onContYearChange() {
 function defaultFxSettings() {
   return {
     rates: [
-      { id: 1, emoji: '💵', code: 'USD', name: 'Dólar', rate: 4200, apiUrl: 'https://api.frankfurter.app/latest?from=USD' },
-      { id: 2, emoji: '💶', code: 'EUR', name: 'Euro', rate: 4600, apiUrl: 'https://api.frankfurter.app/latest?from=EUR' }
+      { id: 1, emoji: '🇨🇴', code: 'USD-COL', name: 'Dólar Col oficial', rate: 3232, apiUrl: 'https://co.dolarapi.com/v1/cotizaciones' },
+      { id: 2, emoji: '🇨🇴', code: 'USD-COL-P2P', name: 'Dólar Col P2P', rate: 3221, apiUrl: 'https://open.er-api.com/v6/latest/USD' },
+      { id: 3, emoji: '🇻🇪', code: 'USD-VEN-BCV', name: 'Dólar Ven BCV', rate: 896, apiUrl: 'https://ve.dolarapi.com/v1/dolares/oficial' },
+      { id: 4, emoji: '🇻🇪', code: 'USD-VEN-P2P', name: 'Dólar Ven P2P', rate: 1026, apiUrl: 'https://ve.dolarapi.com/v1/dolares/paralelo' },
+      { id: 5, emoji: '💵', code: 'USD', name: 'USD mid (ref.)', rate: 3232, apiUrl: 'https://api.frankfurter.dev/v2/rates?base=USD&quotes=COP' },
+      { id: 6, emoji: '💶', code: 'EUR', name: 'Euro', rate: 3608, apiUrl: 'https://co.dolarapi.com/v1/cotizaciones' }
     ]
   };
 }
@@ -11117,6 +11121,50 @@ function fxAddRate() {
   try { autoSave(); } catch (e) {}
   toast('Moneda agregada');
 }
+function extractRateFromJson(data, code) {
+  if (data == null) return null;
+  code = String(code || '').toUpperCase();
+  // Número directo
+  if (typeof data === 'number' && isFinite(data) && data > 0) return data;
+  // frankfurter v2 array [{rate}]
+  if (Array.isArray(data) && data.length && data[0] && data[0].rate != null)
+    return +data[0].rate;
+  // dolarapi lista cotizaciones [{moneda, compra, venta, ultimoCierre, promedio}]
+  if (Array.isArray(data)) {
+    var want = code.indexOf('EUR') >= 0 ? 'EUR' : 'USD';
+    var row = data.find(function (x) { return String(x.moneda || x.currency || '').toUpperCase() === want; }) || data[0];
+    if (row) {
+      var v = row.promedio != null ? row.promedio
+        : (row.ultimoCierre != null ? row.ultimoCierre
+        : (row.venta != null && row.compra != null ? ( (+row.venta) + (+row.compra) ) / 2
+        : (row.venta != null ? row.venta : row.compra)));
+      if (v != null && +v > 0) return +v;
+    }
+  }
+  // objeto con promedio / value / rate / valor
+  if (typeof data === 'object') {
+    if (data.promedio != null && +data.promedio > 0) return +data.promedio;
+    if (data.value != null && +data.value > 0) return +data.value;
+    if (data.valor != null && +data.valor > 0) return +data.valor;
+    if (data.rate != null && +data.rate > 0) return +data.rate;
+    if (data.ultimoCierre != null && +data.ultimoCierre > 0) return +data.ultimoCierre;
+    if (data.venta != null && data.compra != null) return ((+data.venta) + (+data.compra)) / 2;
+    if (data.venta != null && +data.venta > 0) return +data.venta;
+    // data.data.value (TRM Colombia)
+    if (data.data && data.data.value != null && +data.data.value > 0) return +data.data.value;
+    // bcv.today { USD: 896 }
+    if (data.USD != null && +data.USD > 0 && code.indexOf('EUR') < 0) return +data.USD;
+    if (data.EUR != null && +data.EUR > 0 && code.indexOf('EUR') >= 0) return +data.EUR;
+    // rates.COP / conversion_rates.COP
+    var rates = data.rates || data.conversion_rates || null;
+    if (rates) {
+      if (rates.COP != null && +rates.COP > 0) return +rates.COP;
+      if (rates.VES != null && +rates.VES > 0) return +rates.VES;
+      if (code && rates[code] != null && +rates[code] > 0) return +rates[code];
+    }
+  }
+  return null;
+}
 async function fxFetchOne(index, silent) {
   ensureFx();
   fxCollectEditList();
@@ -11133,19 +11181,9 @@ async function fxFetchOne(index, silent) {
     const res = await fetch(apiUrl, { cache: 'no-store' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
-    const ratesObj = data.rates || data.conversion_rates || {};
-    const code = (r.code || '').toUpperCase();
-    const base = (data.base || code).toUpperCase();
-    let ok = false;
-    if (ratesObj.COP) {
-      // frankfurter from CODE → rates.COP = COP per 1 CODE
-      r.rate = +ratesObj.COP;
-      ok = true;
-    } else if (ratesObj[code] && base === 'COP') {
-      r.rate = +ratesObj[code];
-      ok = true;
-    }
-    if (!ok) throw new Error('JSON sin tasa COP usable');
+    const val = extractRateFromJson(data, r.code || '');
+    if (val == null || !(val > 0)) throw new Error('JSON sin tasa usable');
+    r.rate = Math.round(val * 100) / 100;
     renderHomeFx();
     renderFxArchivo();
     try { autoSave(); } catch (e) {}
@@ -11179,6 +11217,7 @@ async function fxFetchApi(silent) {
   if (!silent) toast(msg);
   return ok > 0;
 }
+
 function bindFxUI() {
   const b1 = document.getElementById('btnFxRefresh');
   const b2 = document.getElementById('btnFxGoArchivo');
