@@ -1564,7 +1564,10 @@ header #empresaSelect{
       <input id="pName" placeholder="Nombre del producto" style="margin-bottom:6px">
       <div class="form-row" style="margin:0 0 6px">
         <label class="label">Código id</label>
-        <input id="pCodigo" placeholder="Auto: 1-0001 / 2-0001 (editable)" autocomplete="off">
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+        <input id="pCodigo" placeholder="Auto: 1-0001 / 2-0001" autocomplete="off" style="flex:1;margin:0">
+        <button type="button" class="sm warn" id="btnUnlockCodigo" title="Editar código id">✏️</button>
+      </div>
       </div>
       <div class="grid2" style="margin-bottom:6px">
         <input id="pCompra" type="number" min="0" step="1" placeholder="P. Compra">
@@ -1992,6 +1995,13 @@ header #empresaSelect{
         <p class="sub">Proyecto base: <strong>👨‍💼 Luis Jose Bonilla &amp; Empresas</strong>. Cambia la empresa en el selector del encabezado. Cada una tiene nombre, NIT, bancos, WhatsApp y banner PDF propios. La <strong>contabilidad es única</strong> (compartida).</p>
         <div class="form-row"><label class="label">Nombre de la empresa (visible en la app)</label>
           <input id="setLabel" placeholder="Ej. AtcbOficial · Perfumes L&R"></div>
+        <div class="grid2" style="margin-top:8px">
+          <div><label class="label">Prefijo código id</label>
+          <input id="setCodigoPrefix" placeholder="1 · 2" maxlength="3" style="text-transform:uppercase"></div>
+          <div><label class="label">Próximo código</label>
+          <input id="setCodigoNext" readonly style="opacity:.85" title="Se calcula solo"></div>
+        </div>
+        <p class="hint" style="margin:4px 0 8px">El prefijo identifica la empresa (Atcb=1, Perfumes=2). El número siguiente se asigna solo al crear. No cambies el código de productos ya exportados al catálogo.</p>
         <p class="hint" style="margin:0 0 8px">Nombre comercial de la empresa activa (selector, encabezado, libro). Puedes cambiarlo cuando quieras.</p>
         <div class="form-row"><label class="label">Nombre / Razón social · PDF, térmica, WA, CxC</label>
           <input id="setName" placeholder="Ej. Luis Jose Bonilla"></div>
@@ -2844,7 +2854,7 @@ const DEFAULT_PROY_DESC = {
 };
 function defaultEmpresaAtcb() {
   return {
-    id: EMPRESA_ATCB, label: 'AtcbOficial', tagline: 'Refrigeración Comercial Industrial', catalogUrl: 'https://atcboficial.github.io/AtcbOficial.Catalogo/', themeColor: '#4da3ff',
+    id: EMPRESA_ATCB, label: 'AtcbOficial', tagline: 'Refrigeración Comercial Industrial', codigoPrefix: '1', catalogUrl: 'https://atcboficial.github.io/AtcbOficial.Catalogo/', themeColor: '#4da3ff',
     name: 'LUIS J. BONILLA P.', nit: '700326444-6', tel: '3134399033', social: '@AtcbOficial',
     note: 'Artículo 437 del Estatuto Tributario, Persona Natural / No responsable de IVA',
     email: 'bonilla.luis.pj@gmail.com', dir: 'Ibague, Tolima, Colombia',
@@ -2876,7 +2886,7 @@ function defaultEmpresaAtcb() {
 }
 function defaultEmpresaPerfumes() {
   return {
-    id: EMPRESA_PERFUMES, label: 'Perfumes L&R', tagline: 'Fabricantes de lociones personales', catalogUrl: 'https://atcboficial.github.io/PerfumesLyR.Co/', themeColor: '#c9a574',
+    id: EMPRESA_PERFUMES, label: 'Perfumes L&R', tagline: 'Fabricantes de lociones personales', codigoPrefix: '2', catalogUrl: 'https://atcboficial.github.io/PerfumesLyR.Co/', themeColor: '#c9a574',
     name: 'PERFUMES L&R', nit: '', tel: '', social: '',
     note: 'Persona Natural / No responsable de IVA',
     email: '', dir: 'Ibague, Tolima, Colombia',
@@ -3307,6 +3317,10 @@ function syncSettingsUI() {
   const e = empCfg();
   const sl = document.getElementById('setLabel');
   if (sl) sl.value = e.label || '';
+  const scp = document.getElementById('setCodigoPrefix');
+  if (scp) scp.value = e.codigoPrefix || empCodigoPrefix(activeEmpresa);
+  const scn = document.getElementById('setCodigoNext');
+  if (scn) scn.value = (typeof nextCodigoId === 'function' ? nextCodigoId(activeEmpresa) : '');
   setName.value = e.name || '';
   const scu = document.getElementById('setCatalogUrl');
   if (scu) scu.value = e.catalogUrl || '';
@@ -3475,7 +3489,7 @@ function loadFromObj(obj) {
   const atcb0 = defaultEmpresaAtcb();
   const perf0 = defaultEmpresaPerfumes();
   const empIn = s.empresas || {};
-  const atcb = Object.assign({}, atcb0, empIn.atcb || {}, !empIn.atcb ? {
+  const atcb = Object.assign({}, atcb0, { codigoPrefix: (empIn.atcb && empIn.atcb.codigoPrefix) || atcb0.codigoPrefix || '1' }, empIn.atcb || {}, !empIn.atcb ? {
     name: s.name || c.name || atcb0.name,
     nit: s.nit || c.nit || atcb0.nit,
     tel: s.tel || c.tel || atcb0.tel,
@@ -3512,6 +3526,8 @@ function loadFromObj(obj) {
   if (perfumes.daysCotizacion == null) perfumes.daysCotizacion = 7;
   if (perfumes.daysVencidas == null) perfumes.daysVencidas = 7;
   if (perfumes.daysStock == null) perfumes.daysStock = 30;
+  if (!atcb.codigoPrefix) atcb.codigoPrefix = '1';
+  if (!perfumes.codigoPrefix) perfumes.codigoPrefix = '2';
   const s0 = obj.settings || {};
   settings = {
     daysPendiente: atcb.daysPendiente,
@@ -4277,6 +4293,7 @@ function renderStats() {
             <div class="line">⚖️ Saldo: <strong class="${saldo > 0 ? 'warn' : 'income'}">${money(saldo)}</strong> · Abonado ${money(abonado)}</div>
           ` : ''}
           <div class="row-actions" style="margin-top:10px;justify-content:flex-start;flex-wrap:wrap" onclick="event.stopPropagation()">
+            <button type="button" class="sm warn" onclick="viewInvDetail(${inv.id})" title="Ver detalle">👀</button>
             <button type="button" class="sm success" onclick="sendCxc(${inv.id})">📲 CxC</button>
             <button type="button" class="sm warn" onclick="editInv(${inv.id})" class="warn">✏️</button>
             <button type="button" class="sm print" onclick="printInv(${inv.id})" title="PDF / carta">🖨️</button>
@@ -4311,6 +4328,7 @@ function renderStats() {
           return ` · Costo <strong>${money(c)}</strong> · Rent. <strong class="${r>=0?'income':'expense'}">${money(r)}</strong>`;
         })()}</div>
           <div class="row-actions" style="margin-top:10px;justify-content:flex-start;flex-wrap:wrap" onclick="event.stopPropagation()">
+            <button type="button" class="sm warn" onclick="viewInvDetail(${inv.id})" title="Ver detalle">👀</button>
             <button type="button" class="sm success" onclick="motivarCotiz(${inv.id})">💬 Motivar</button>
             <button type="button" class="sm warn" onclick="editInv(${inv.id})" class="warn">✏️</button>
             <button type="button" class="sm print" onclick="printInv(${inv.id})" title="PDF / carta">🖨️</button>
@@ -4631,13 +4649,22 @@ function closeExportCatalogModal() {
 
 /** Prefijo de código id por empresa: Atcb 1- · Perfumes 2- */
 function empCodigoPrefix(empresa) {
-  return (empresa || activeEmpresa) === EMPRESA_PERFUMES ? '2' : '1';
+  const emp = empresa || activeEmpresa;
+  try {
+    const e = (settings.empresas || {})[emp] || {};
+    const p = String(e.codigoPrefix != null ? e.codigoPrefix : '').trim();
+    if (p) return p.replace(/[^0-9A-Za-z]/g, '').slice(0, 3) || (emp === EMPRESA_PERFUMES ? '2' : '1');
+  } catch (err) {}
+  return emp === EMPRESA_PERFUMES ? '2' : '1';
+}
+function empNextCodigoPreview(empresa) {
+  return nextCodigoId(empresa || activeEmpresa);
 }
 /** Normaliza código id. Formato preferido: 1-0100 / 2-0100 */
 function normCodigoId(c) {
   let s = String(c || '').trim().toUpperCase().replace(/\s+/g, '');
   if (!s) return '';
-  const m = s.match(/^([12])-?(\d{1,6})$/);
+  const m = s.match(/^([0-9A-Z]{1,3})-?(\d{1,6})$/);
   if (m) return m[1] + '-' + m[2].padStart(4, '0');
   return s;
 }
@@ -5068,7 +5095,12 @@ async function editProd(id) {
   pStock.value = p.stock ?? 0;
   prodFecha.value = p.fecha || today();
   const pCod = document.getElementById('pCodigo');
-  if (pCod) pCod.value = p.codigo || '';
+  if (pCod) {
+    pCod.value = p.codigo || '';
+    pCod.dataset.origCodigo = p.codigo || '';
+    pCod.readOnly = true;
+    pCod.title = 'Código bloqueado · toca ✏️ para editar';
+  }
   const pUrl = document.getElementById('pImgUrl');
   if (pUrl) pUrl.value = normImgUrl(p.img || '');
   setProdImgPreview(document.getElementById('pImgPreview'), normImgUrl(p.img || '') || '');
@@ -5112,12 +5144,31 @@ async function delProd(id) {
   products = products.filter(x => x.id !== id);
   await autoSave(); renderProducts(); toast('Producto eliminado');
 }
+(function(){
+  const bu = document.getElementById('btnUnlockCodigo');
+  if (bu) bu.onclick = function() {
+    const pCod = document.getElementById('pCodigo');
+    if (!pCod) return;
+    if (pCod.readOnly) {
+      if (!confirm('¿Editar el código id? Solo si aún no lo exportaste al catálogo.')) return;
+      pCod.readOnly = false;
+      pCod.focus();
+      toast('Código editable');
+    }
+  };
+})();
 btnNewProd.onclick = () => {
   editingProdId = null;
   editingCapMl = null;
   pName.value = ''; pCompra.value = ''; pVenta.value = '';
   pStock.value = ''; prodFecha.value = today();
-  const pCod = document.getElementById('pCodigo'); if (pCod) pCod.value = nextCodigoId(activeEmpresa);
+  const pCod = document.getElementById('pCodigo');
+  if (pCod) {
+    pCod.value = nextCodigoId(activeEmpresa);
+    pCod.readOnly = false;
+    pCod.dataset.origCodigo = '';
+    pCod.title = 'Se asigna solo; puedes ajustarlo si hace falta';
+  }
   clearProdImgUI('p');
   const pFamEl = document.getElementById('pFamilia'); if (pFamEl) pFamEl.value = '';
   const pObsEl = document.getElementById('pObs'); if (pObsEl) pObsEl.value = '';
@@ -5156,8 +5207,16 @@ btnSaveProd.onclick = async () => {
   const familia = ((document.getElementById('pFamilia') || {}).value || '').trim();
   let codigo = normCodigoId((document.getElementById('pCodigo') || {}).value || '');
   if (!codigo && !editingProdId) codigo = nextCodigoId(activeEmpresa);
+  const pCodEl = document.getElementById('pCodigo');
+  const origCod = pCodEl ? (pCodEl.dataset.origCodigo || '') : '';
+  if (editingProdId && origCod && normCodigoId(origCod) !== codigo) {
+    if (!confirm('Vas a cambiar el código id de ' + origCod + ' a ' + codigo + '.\nSi ya lo exportaste al catálogo, se romperá el vínculo.\n¿Continuar?')) {
+      if (pCodEl) { pCodEl.value = origCod; pCodEl.readOnly = true; }
+      return;
+    }
+  }
   if (!assertCodigoLibre(codigo, editingProdId, activeEmpresa)) return;
-  const pCodEl = document.getElementById('pCodigo'); if (pCodEl) pCodEl.value = codigo;
+  if (pCodEl) pCodEl.value = codigo;
   const img = getProdImgFromUI('p');
   const labBox = document.getElementById('prodLabBox');
   const labOpen = labBox && labBox.style.display !== 'none';
@@ -5321,6 +5380,25 @@ function goToCliente(id) {
   setTimeout(function () { flashCard('#cliList .list-card[data-cli-id="' + id + '"]'); }, 150);
 }
 
+
+function detailRowsHtml(rows) {
+  /* rows: [{emoji, label, value, pre?}] */
+  return (rows || []).map(function (r) {
+    if (r.value == null || r.value === '') return '';
+    var val = r.pre
+      ? '<div style="white-space:pre-wrap;margin-top:4px;line-height:1.45">' + escapeHtml(String(r.value)) + '</div>'
+      : escapeHtml(String(r.value));
+    return '<div class="d-row">' + (r.emoji ? r.emoji + ' ' : '') +
+      '<strong>' + escapeHtml(r.label || '') + '</strong>' +
+      (r.pre ? '' : ': ') + (r.pre ? val : ' ' + val) + '</div>';
+  }).join('');
+}
+function detailImgHtml(url) {
+  if (!url || String(url).indexOf('http') !== 0) return '';
+  return '<div style="text-align:center;margin:0 0 12px"><img src="' + escapeHtml(url) +
+    '" alt="" style="max-width:100%;max-height:180px;border-radius:12px;border:1px solid var(--border);object-fit:contain" onerror="this.style.display=\'none\'"></div>';
+}
+
 function viewProdDetail(id) {
   const p = products.find(x => x.id === id);
   if (!p) return;
@@ -5426,7 +5504,7 @@ function viewCliDetail(id) {
   html += `<div class="d-row"><strong>Dirección:</strong> ${escapeHtml(c.direccion || '—')}</div>`;
   html += `<div class="d-row"><strong>Email:</strong> ${escapeHtml(c.email || '—')}</div>`;
   html += `<div class="d-row"><strong>Fecha:</strong> ${fmtDate(c.fecha)} (${daysAgo(c.fecha)} d)</div>`;
-  if (c.obs) html += `<div class="d-row"><strong>Observaciones:</strong><br>${escapeHtml(c.obs).replace(/\n/g, '<br>')}</div>`;
+  if (c.obs) html += `<div class="d-row">📝 <strong>Observaciones</strong><div style="white-space:pre-wrap;margin-top:6px;line-height:1.45">${escapeHtml(c.obs)}</div></div>`;
   const related = (invoices || []).filter(inv => {
     const n = (inv.cliente || '').toLowerCase().trim();
     const cn = (c.nombre || '').toLowerCase().trim();
@@ -5562,7 +5640,7 @@ function viewProvDetail(id) {
   if (web) html += `<div class="d-row"><strong>Web:</strong> <a href="${escapeHtml(web)}" target="_blank" rel="noopener" style="color:var(--accent)">${escapeHtml(v.web || web)}</a></div>`;
   html += `<div class="d-row"><strong>Fecha:</strong> ${fmtDate(v.fecha)} (${daysAgo(v.fecha)} d)</div>`;
   html += `<div class="d-row"><strong>Empresa:</strong> ${escapeHtml((v.empresa === 'perfumes') ? 'Perfumes L&R' : 'AtcbOficial')}</div>`;
-  if (v.obs) html += `<div class="d-row"><strong>Observaciones:</strong><br>${escapeHtml(v.obs).replace(/\n/g, '<br>')}</div>`;
+  if (v.obs) html += `<div class="d-row">📝 <strong>Observaciones</strong><div style="white-space:pre-wrap;margin-top:6px;line-height:1.45">${escapeHtml(v.obs)}</div></div>`;
   // Insumos que ofrece este proveedor
   const offers = (insumos || []).filter(ins => (ins.proveedores || []).some(pv => +pv.id === +v.id));
   if (offers.length) {
@@ -8596,6 +8674,12 @@ btnSaveCompany.onclick = async () => {
     if (lab) e.label = lab;
   }
   e.name = setName.value.trim() || e.name;
+  const scpSave = document.getElementById('setCodigoPrefix');
+  if (scpSave) {
+    let pref = String(scpSave.value || '').trim().toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 3);
+    if (!pref) pref = empCodigoPrefix(activeEmpresa);
+    e.codigoPrefix = pref;
+  }
   const scu = document.getElementById('setCatalogUrl');
   if (scu) e.catalogUrl = (scu.value || '').trim();
   const elThemeColor2 = document.getElementById('setThemeColor');
@@ -10294,8 +10378,8 @@ function viewInsDetail(id) {
   html += `<div class="d-row"><strong>Categoría:</strong> ${escapeHtml(catLabel)}</div>`;
   html += `<div class="d-row"><strong>Precio base:</strong> $ ${formatMoneyInput(i.precio)} / ${und}</div>`;
   html += `<div class="d-row"><strong>Stock:</strong> ${i.stock ?? 0} ${und}</div>`;
-  if (i.familia || i.familiaOlfativa) html += `<div class="d-row"><strong>Familia olfativa:</strong> ${escapeHtml(i.familia || i.familiaOlfativa)}</div>`;
-  if (i.obs) html += `<div class="d-row"><strong>Observaciones:</strong><br>${escapeHtml(i.obs).replace(/\n/g, '<br>')}</div>`;
+  if (i.familia || i.familiaOlfativa) html += `<div class="d-row">👃 <strong>Familia olfativa:</strong> ${escapeHtml(i.familia || i.familiaOlfativa)}</div>`;
+  if (i.obs) html += `<div class="d-row">📝 <strong>Observaciones</strong><div style="white-space:pre-wrap;margin-top:6px;line-height:1.45">${escapeHtml(i.obs)}</div></div>`;
   const provs = i.proveedores || [];
   if (provs.length) {
     html += `<div class="section-title" style="margin:12px 0 6px;font-size:13px">Proveedores</div>`;
