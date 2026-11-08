@@ -1583,6 +1583,7 @@ header #empresaSelect{
           <p class="hint">Solo URL pública. No se sube archivo (más liviano en Firebase).</p>
         </div>
       </div>
+      <input id="pFamilia" placeholder="Familia olfativa (amaderado, cítrico, dulce…)" style="margin-bottom:6px" autocomplete="off">
       <textarea id="pObs" placeholder="Observaciones (notas libres...)" style="margin-bottom:6px;min-height:56px"></textarea>
       <div id="prodLabBox" style="display:none;margin:8px 0;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--card2)">
         <div class="section-title" style="font-size:13px;margin:0 0 8px">🔬 Fórmula laboratorio</div>
@@ -1658,6 +1659,7 @@ header #empresaSelect{
         <input id="insPrecio" type="number" min="0" step="0.0001" placeholder="Precio base ($/g o $/ud)">
         <input id="insStock" type="number" min="0" step="0.01" placeholder="Stock">
       </div>
+      <input id="insFamilia" placeholder="Familia olfativa (amaderado, cítrico, dulce…)" style="margin-bottom:6px" autocomplete="off">
       <textarea id="insObs" placeholder="Observaciones (notas libres...)" style="margin-bottom:6px;min-height:56px"></textarea>
       <div style="margin:8px 0;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--card2)">
         <div class="section-title" style="font-size:13px;margin:0 0 8px">🏭 Proveedores que lo ofrecen</div>
@@ -1680,7 +1682,7 @@ header #empresaSelect{
       <div class="section-title" style="margin:0 0 8px">🧪 Insumos / Implementos</div>
       <div class="sticky-search">
         <div class="actions" style="grid-template-columns:1fr auto auto;gap:6px">
-          <input id="insSearch" placeholder="Buscar nombre o código...">
+          <input id="insSearch" placeholder="Buscar nombre, código, familia, obs...">
           <select id="insFilterCat" title="Categoría" style="min-width:110px">
             <option value="">Todas</option>
             <option value="quimico">Químico (g)</option>
@@ -1735,6 +1737,7 @@ header #empresaSelect{
           </div>
         </div>
         <div class="form-row" style="margin-bottom:10px">
+          <input id="labFamilia" placeholder="Familia olfativa (amaderado, cítrico, dulce…)" style="margin-bottom:6px" autocomplete="off">
           <textarea id="labObs" placeholder="Observaciones (notas libres...)" style="min-height:56px"></textarea>
         </div>
         <div class="lab-cols">
@@ -3534,6 +3537,8 @@ function loadFromObj(obj) {
       obs: p.obs || '',
       codigo: (p.codigo != null ? String(p.codigo) : (p.codeId != null ? String(p.codeId) : '')),
       img: (typeof p.img === 'string' && p.img.indexOf('http') === 0) ? p.img : '',
+      familia: p.familia || p.familiaOlfativa || '',
+      obs: p.obs || '',
       empresa: (p.empresa === EMPRESA_PERFUMES || p.empresa === 'perfumes') ? EMPRESA_PERFUMES : EMPRESA_ATCB
     };
     if (p.lab && typeof p.lab === 'object') {
@@ -3638,6 +3643,7 @@ function loadFromObj(obj) {
     precio: +i.precio || 0,
     stock: +i.stock || 0,
     obs: i.obs || '',
+    familia: i.familia || i.familiaOlfativa || '',
     proveedores: Array.isArray(i.proveedores) ? i.proveedores.map(pv => ({
       id: +pv.id || 0,
       nombre: pv.nombre || '',
@@ -4865,7 +4871,9 @@ function exportCatalogSelection() {
     items.push({
       codigo,
       nombre: String(nombre || '').trim(),
-      img
+      img,
+      familia: String(p.familia || p.familiaOlfativa || '').trim(),
+      obs: String(p.obs || '').trim()
     });
   });
   if (!items.length) {
@@ -4909,7 +4917,9 @@ function renderProducts() {
     .filter(p => (p.empresa || EMPRESA_ATCB) === activeEmpresa)
     .filter(p => {
       const code = (p.codigo || '').toLowerCase();
-      return (p.name || '').toLowerCase().includes(q) || basePerfumeName(p.name).toLowerCase().includes(q) || code.includes(q);
+      const fam = (p.familia || p.familiaOlfativa || '').toLowerCase();
+      const obs = (p.obs || '').toLowerCase();
+      return !q || (p.name || '').toLowerCase().includes(q) || basePerfumeName(p.name).toLowerCase().includes(q) || code.includes(q) || fam.includes(q) || obs.includes(q);
     })
     .sort((a, b) => {
       if (sortMode === 'code') {
@@ -4945,6 +4955,7 @@ function renderProducts() {
           <div class="line">📦 Stock: <strong>${p.stock ?? 0}</strong></div>
           <div class="line">🏷️ ${escapeHtml(priceTxt)}</div>
           <div class="line">🛒 Vendido: <strong>${vendido}</strong> ud en facturas</div>
+          ${(p.familia || p.familiaOlfativa) ? `<div class="line">👃 ${escapeHtml(p.familia || p.familiaOlfativa)}</div>` : ''}
           ${obs ? `<div class="line">📝 ${escapeHtml(obs)}</div>` : ''}
           <div class="row-actions" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap">
             <button type="button" class="sm warn" onclick="viewProdDetail(${p.id})" title="Ver detalles">👀</button>
@@ -5062,6 +5073,8 @@ async function editProd(id) {
   const pUrl = document.getElementById('pImgUrl');
   if (pUrl) pUrl.value = normImgUrl(p.img || '');
   setProdImgPreview(document.getElementById('pImgPreview'), normImgUrl(p.img || '') || '');
+  const pFamEl = document.getElementById('pFamilia');
+  if (pFamEl) pFamEl.value = p.familia || p.familiaOlfativa || '';
   const pObsEl = document.getElementById('pObs');
   if (pObsEl) pObsEl.value = p.obs || '';
 
@@ -5107,6 +5120,7 @@ btnNewProd.onclick = () => {
   pStock.value = ''; prodFecha.value = today();
   const pCod = document.getElementById('pCodigo'); if (pCod) pCod.value = nextCodigoId(activeEmpresa);
   clearProdImgUI('p');
+  const pFamEl = document.getElementById('pFamilia'); if (pFamEl) pFamEl.value = '';
   const pObsEl = document.getElementById('pObs'); if (pObsEl) pObsEl.value = '';
   prodLabQ = []; prodLabI = [];
   showProdLabBox(false);
@@ -5140,6 +5154,7 @@ btnSaveProd.onclick = async () => {
     fecha = today();
   }
   const obs = ((document.getElementById('pObs') || {}).value || '').trim();
+  const familia = ((document.getElementById('pFamilia') || {}).value || '').trim();
   let codigo = normCodigoId((document.getElementById('pCodigo') || {}).value || '');
   if (!codigo && !editingProdId) codigo = nextCodigoId(activeEmpresa);
   if (!assertCodigoLibre(codigo, editingProdId, activeEmpresa)) return;
@@ -5185,6 +5200,7 @@ btnSaveProd.onclick = async () => {
     prev.stock = +pStock.value || 0;
     prev.fecha = fecha;
     prev.obs = obs;
+    prev.familia = (typeof familia !== 'undefined' ? familia : ((document.getElementById('pFamilia') || {}).value || '').trim());
     prev.codigo = codigo;
     prev.img = img || '';
     products[i] = prev;
@@ -5209,6 +5225,7 @@ btnSaveProd.onclick = async () => {
     stock: +pStock.value || 0,
     fecha,
     obs,
+    familia: (typeof familia !== 'undefined' ? familia : ((document.getElementById('pFamilia') || {}).value || '').trim()),
     codigo,
     img: img || '',
     empresa: activeEmpresa
@@ -10278,6 +10295,7 @@ function viewInsDetail(id) {
   html += `<div class="d-row"><strong>Categoría:</strong> ${escapeHtml(catLabel)}</div>`;
   html += `<div class="d-row"><strong>Precio base:</strong> $ ${formatMoneyInput(i.precio)} / ${und}</div>`;
   html += `<div class="d-row"><strong>Stock:</strong> ${i.stock ?? 0} ${und}</div>`;
+  if (i.familia || i.familiaOlfativa) html += `<div class="d-row"><strong>Familia olfativa:</strong> ${escapeHtml(i.familia || i.familiaOlfativa)}</div>`;
   if (i.obs) html += `<div class="d-row"><strong>Observaciones:</strong><br>${escapeHtml(i.obs).replace(/\n/g, '<br>')}</div>`;
   const provs = i.proveedores || [];
   if (provs.length) {
@@ -10315,11 +10333,9 @@ function renderInsumos() {
     const name = (i.producto || '').toLowerCase();
     const obs = (i.obs || '').toLowerCase();
     const cod = (i.codigo || '').toLowerCase();
-    const provNames = (i.proveedores || []).map(pv => {
-      const p = (proveedores || []).find(x => +x.id === +pv.id);
-      return (p && p.nombre || '').toLowerCase();
-    }).join(' ');
-    return name.includes(q) || obs.includes(q) || cod.includes(q) || provNames.includes(q);
+    const fam = (i.familia || i.familiaOlfativa || '').toLowerCase();
+    const provNames = (i.proveedores || []).map(function(pv){ return (pv.nombre || '').toLowerCase(); }).join(' ');
+    return name.includes(q) || obs.includes(q) || cod.includes(q) || fam.includes(q) || provNames.includes(q);
   });
   const sortMode = ((document.getElementById('insSort') || {}).value) || 'name';
   list.sort((a, b) => {
@@ -10356,6 +10372,7 @@ function renderInsumos() {
           ${icod ? `<div class="line">🪪 <strong>${escapeHtml(icod)}</strong></div>` : ''}
           <div class="line">Precio base: <strong>$ ${formatMoneyInput(i.precio)}</strong> / ${und} · Stock: <strong>${i.stock || 0}</strong></div>
           ${provLines || '<div class="line" style="color:var(--muted)">🏭 Sin proveedores anotados</div>'}
+          ${(i.familia || i.familiaOlfativa) ? `<div class="line">👃 ${escapeHtml(i.familia || i.familiaOlfativa)}</div>` : ''}
           ${obs ? `<div class="line">📝 ${escapeHtml(obs)}</div>` : ''}
           <div class="row-actions" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap">
             <button type="button" class="sm warn" onclick="viewInsDetail(${i.id})" title="Ver detalles">👀</button>
@@ -10379,6 +10396,7 @@ function openInsForm(isNew) {
     document.getElementById('insProd').value = '';
     document.getElementById('insPrecio').value = '';
     document.getElementById('insStock').value = '0';
+    const fam = document.getElementById('insFamilia'); if (fam) fam.value = '';
     const obs = document.getElementById('insObs'); if (obs) obs.value = '';
     const ic = document.getElementById('insCodigo');
     if (ic) ic.value = nextInsCodigo('quimico');
@@ -10398,6 +10416,7 @@ function editInsumo(id) {
   document.getElementById('insProd').value = i.producto || '';
   document.getElementById('insPrecio').value = i.precio || 0;
   document.getElementById('insStock').value = i.stock || 0;
+  const fam = document.getElementById('insFamilia'); if (fam) fam.value = i.familia || i.familiaOlfativa || '';
   const obs = document.getElementById('insObs'); if (obs) obs.value = i.obs || '';
   const ic = document.getElementById('insCodigo'); if (ic) ic.value = i.codigo || '';
   const iu = document.getElementById('insImgUrl');
@@ -10435,6 +10454,7 @@ async function saveInsumo() {
     precio: parseFloat(document.getElementById('insPrecio').value) || 0,
     stock: parseFloat(document.getElementById('insStock').value) || 0,
     obs: ((document.getElementById('insObs') || {}).value || '').trim(),
+    familia: ((document.getElementById('insFamilia') || {}).value || '').trim(),
     proveedores: (insProvOffers || []).map(pv => {
       const p = (proveedores || []).find(x => +x.id === +pv.id);
       return { id: +pv.id, nombre: (p && p.nombre) || pv.nombre || '', precio: +pv.precio || 0 };
@@ -10683,6 +10703,7 @@ async function guardarStockLab() {
   const compra = Math.round(r.costo * 100) / 100;
   const venta = Math.round(r.pvp * 100) / 100;
   const obs = ((document.getElementById('labObs') || {}).value || '').trim();
+  const familia = ((document.getElementById('labFamilia') || {}).value || '').trim();
   let codigo = normCodigoId((document.getElementById('labCodigo') || {}).value || '');
   if (!codigo) codigo = nextCodigoId(EMPRESA_PERFUMES);
   const img = getProdImgFromUI('lab');
@@ -10706,6 +10727,7 @@ async function guardarStockLab() {
     p.lab = lab;
     p.name = nombre;
     if (obs) p.obs = obs;
+    if (typeof familia !== 'undefined') p.familia = familia;
     p.codigo = codigo;
     p.img = img || p.img || '';
     p.fecha = today();
@@ -10721,6 +10743,7 @@ async function guardarStockLab() {
       stock: 0,
       fecha: today(),
       obs,
+      familia,
       codigo: codigo || '',
       img: img || '',
       lab,
@@ -10755,6 +10778,7 @@ function clearLab() {
   document.getElementById('labMargen').value = '50';
   const lc = document.getElementById('labCodigo'); if (lc) lc.value = nextCodigoId(EMPRESA_PERFUMES);
   clearProdImgUI('lab');
+  const lf = document.getElementById('labFamilia'); if (lf) lf.value = '';
   const lo = document.getElementById('labObs'); if (lo) lo.value = '';
   labQ = [{ prod: '', g: 0, precio: 0 }];
   labI = [{ prod: '', u: 0, precio: 0 }];
