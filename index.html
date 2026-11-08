@@ -1089,7 +1089,7 @@ header #empresaSelect{
   <!-- INICIO -->
   <section id="home" class="view active">
     <!-- 0) Tasa de cambios -->
-    <details class="collapse" id="homeFxSec" open>
+    <details class="collapse" id="homeFxSec">
       <summary>💱 Tasa de cambios</summary>
       <div class="body">
         <div id="homeFxList" class="fx-list"></div>
@@ -2716,6 +2716,8 @@ function startFirebaseAuth() {
         if (!hasLocal) await loadFromFirebase(true);
         else setFbStatus('<span class="ok">Sesión:</span> ' + String(user.email || '').replace(/</g,'&lt;') + ' · datos locales en memoria (puedes Cargar nube)');
       } catch (e) {}
+      try { renderHomeFx(); renderFxArchivo(); } catch (e2) {}
+      try { closeAllCollapsesOnBoot(); } catch (e3) {}
     }
   });
 }
@@ -3516,8 +3518,12 @@ function loadFromObj(obj) {
     labCaps: Array.isArray(s0.labCaps) && s0.labCaps.length
       ? s0.labCaps.map(Number).filter(n => n > 0)
       : [30, 60, 120],
-    empresas: { atcb, perfumes }
+    empresas: { atcb, perfumes },
+    fx: (s0.fx && typeof s0.fx === 'object' && Array.isArray(s0.fx.rates))
+      ? { rates: s0.fx.rates, userSet: true }
+      : undefined
   };
+  try { ensureFx(); } catch (eFx) {}
   activeEmpresa = (obj.activeEmpresa === EMPRESA_PERFUMES || obj.activeEmpresa === 'perfumes')
     ? EMPRESA_PERFUMES : EMPRESA_ATCB;
   products = (obj.products || []).map(p => {
@@ -4020,6 +4026,7 @@ function show(id) {
   if (id === 'home') {
     renderStats();
     try { renderHomeFx(); } catch (e) {}
+    try { restoreCollapseState(); } catch (e) {}
   }
   if (id === 'factura') {
     renderLines();
@@ -8758,6 +8765,7 @@ btnSaveBanner.onclick = async () => {
 function refreshAll() {
   renderStats(); renderProducts(); renderClients(); renderInvoices(); renderLines(); syncSettingsUI();
   if (typeof refreshContabilidad === 'function') refreshContabilidad();
+  try { renderHomeFx(); renderFxArchivo(); } catch (e) {}
 }
 
 /* Back gesture trap */
@@ -11019,21 +11027,27 @@ function defaultFxSettings() {
       { id: 2, emoji: '🇨🇴', code: 'USD-COL-P2P', name: 'Dólar Col P2P', rate: 3221, apiUrl: 'https://open.er-api.com/v6/latest/USD' },
       { id: 3, emoji: '🇻🇪', code: 'USD-VEN-BCV', name: 'Dólar Ven BCV', rate: 896, apiUrl: 'https://ve.dolarapi.com/v1/dolares/oficial' },
       { id: 4, emoji: '🇻🇪', code: 'USD-VEN-P2P', name: 'Dólar Ven P2P', rate: 1026, apiUrl: 'https://ve.dolarapi.com/v1/dolares/paralelo' },
-      { id: 5, emoji: '💵', code: 'USD', name: 'USD mid (ref.)', rate: 3232, apiUrl: 'https://api.frankfurter.dev/v2/rates?base=USD&quotes=COP' },
-      { id: 6, emoji: '💶', code: 'EUR', name: 'Euro', rate: 3608, apiUrl: 'https://co.dolarapi.com/v1/cotizaciones' }
+      { id: 7, emoji: '🇪🇺', code: 'EUR-VEN-BCV', name: 'Euro Ven BCV', rate: 1005, apiUrl: 'https://bcv.today/api/v1/rate.json' }
     ]
   };
 }
 function ensureFx() {
-  if (!settings.fx || typeof settings.fx !== 'object') settings.fx = defaultFxSettings();
-  if (!Array.isArray(settings.fx.rates)) settings.fx.rates = defaultFxSettings().rates;
-  // Migrar API global antigua → por moneda
-  const legacyUrl = settings.fx.apiUrl || '';
-  const legacyBase = (settings.fx.apiBase || 'USD').toUpperCase();
+  if (!settings.fx || typeof settings.fx !== 'object') {
+    settings.fx = defaultFxSettings();
+    settings.fx.userSet = false;
+  }
+  if (!Array.isArray(settings.fx.rates)) {
+    settings.fx.rates = defaultFxSettings().rates;
+  }
+  // No volver a meter monedas borradas: solo completar apiUrl vacía
   settings.fx.rates.forEach(function (r) {
-    if (!r.apiUrl) {
-      if (legacyUrl && (r.code || '').toUpperCase() === legacyBase) r.apiUrl = legacyUrl;
-      else if (r.code) r.apiUrl = 'https://api.frankfurter.app/latest?from=' + String(r.code).toUpperCase();
+    if (!r.apiUrl && r.code) {
+      var c = String(r.code).toUpperCase();
+      if (c.indexOf('VEN') >= 0 && c.indexOf('P2P') >= 0) r.apiUrl = 'https://ve.dolarapi.com/v1/dolares/paralelo';
+      else if (c.indexOf('VEN') >= 0 && c.indexOf('EUR') >= 0) r.apiUrl = 'https://bcv.today/api/v1/rate.json';
+      else if (c.indexOf('VEN') >= 0) r.apiUrl = 'https://ve.dolarapi.com/v1/dolares/oficial';
+      else if (c.indexOf('COL') >= 0 && c.indexOf('P2P') >= 0) r.apiUrl = 'https://open.er-api.com/v6/latest/USD';
+      else if (c.indexOf('COL') >= 0) r.apiUrl = 'https://co.dolarapi.com/v1/cotizaciones';
       else r.apiUrl = '';
     }
   });
@@ -11094,6 +11108,7 @@ function fxDeleteRate(i) {
   ensureFx();
   fxCollectEditList();
   settings.fx.rates.splice(i, 1);
+  settings.fx.userSet = true;
   renderFxArchivo();
   renderHomeFx();
   try { autoSave(); } catch (e) {}
@@ -11113,6 +11128,7 @@ function fxAddRate() {
     rate: parseMoney((document.getElementById('fxNewRate') || {}).value),
     apiUrl: api
   });
+  settings.fx.userSet = true;
   ['fxNewEmoji','fxNewCode','fxNewName','fxNewRate','fxNewApi'].forEach(function (id) {
     const el = document.getElementById(id); if (el) el.value = '';
   });
@@ -11152,7 +11168,8 @@ function extractRateFromJson(data, code) {
     if (data.venta != null && +data.venta > 0) return +data.venta;
     // data.data.value (TRM Colombia)
     if (data.data && data.data.value != null && +data.data.value > 0) return +data.data.value;
-    // bcv.today { USD: 896 }
+    // bcv.today { USD: 896, EUR: 1004 }
+    if (code.indexOf('EUR') >= 0 && data.EUR != null && +data.EUR > 0) return +data.EUR;
     if (data.USD != null && +data.USD > 0 && code.indexOf('EUR') < 0) return +data.USD;
     if (data.EUR != null && +data.EUR > 0 && code.indexOf('EUR') >= 0) return +data.EUR;
     // rates.COP / conversion_rates.COP
@@ -11258,7 +11275,47 @@ function bindFxUI() {
   if (ys) ys.onchange = onContYearChange;
 }
 
+
+function closeAllCollapsesOnBoot() {
+  try {
+    if (sessionStorage.getItem('collapseBootDone') === '1') {
+      restoreCollapseState();
+      return;
+    }
+    document.querySelectorAll('details.collapse').forEach(function (d) { d.open = false; });
+    sessionStorage.setItem('collapseBootDone', '1');
+    saveCollapseState();
+  } catch (e) {}
+}
+function saveCollapseState() {
+  try {
+    var st = {};
+    document.querySelectorAll('details.collapse[id]').forEach(function (d) {
+      st[d.id] = !!d.open;
+    });
+    sessionStorage.setItem('collapseState', JSON.stringify(st));
+  } catch (e) {}
+}
+function restoreCollapseState() {
+  try {
+    var raw = sessionStorage.getItem('collapseState');
+    if (!raw) return;
+    var st = JSON.parse(raw);
+    Object.keys(st).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el && el.tagName === 'DETAILS') el.open = !!st[id];
+    });
+  } catch (e) {}
+}
+document.addEventListener('toggle', function (ev) {
+  var t = ev.target;
+  if (t && t.tagName === 'DETAILS' && t.classList.contains('collapse')) {
+    try { saveCollapseState(); } catch (e) {}
+  }
+}, true);
+
 try { bindFxUI(); } catch (e) {}
+try { closeAllCollapsesOnBoot(); } catch (e) {}
 try {
   document.body.classList.add('auth-locked');
   startFirebaseAuth();
