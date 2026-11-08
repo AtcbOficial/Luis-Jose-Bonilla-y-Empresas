@@ -5414,18 +5414,22 @@ function viewProdDetail(id) {
   let html = '';
   const imgSrc = (p.img && (String(p.img).indexOf('http') === 0 || String(p.img).indexOf('data:image') === 0)) ? p.img : '';
   if (imgSrc) {
-    html += `<div style="margin-bottom:10px;text-align:center"><img src="${imgSrc}" alt="" style="max-width:100%;max-height:200px;object-fit:contain;border-radius:10px;border:1px solid var(--border);background:#0e151d" onerror="this.style.display='none'"></div>`;
+    html += `<div style="margin-bottom:12px;text-align:center"><img src="${imgSrc}" alt="" style="max-width:100%;max-height:200px;object-fit:contain;border-radius:12px;border:1px solid var(--border);background:#0e151d" onerror="this.style.display='none'"></div>`;
     if (String(imgSrc).indexOf('http') === 0) {
-      html += `<div class="d-row" style="font-size:11px;word-break:break-all"><strong>Link:</strong> <a href="${imgSrc}" target="_blank" rel="noopener" style="color:var(--accent)">abrir imagen</a></div>`;
+      html += `<div class="d-row" style="font-size:11px;word-break:break-all">🔗 <strong>Link:</strong> <a href="${imgSrc}" target="_blank" rel="noopener" style="color:var(--accent)">abrir imagen</a></div>`;
     }
   }
-  html += `<div class="d-row"><strong>Nombre:</strong> ${escapeHtml(base)}</div>`;
-  if (p.codigo) html += `<div class="d-row"><strong>🪪 Código id:</strong> ${escapeHtml(p.codigo)}</div>`;
-  html += `<div class="d-row"><strong>Stock:</strong> ${p.stock ?? 0}</div>`;
-  html += `<div class="d-row"><strong>Fecha:</strong> ${fmtDate(p.fecha)} (${daysAgo(p.fecha)} d)</div>`;
-  if (p.obs) html += `<div class="d-row"><strong>Obs:</strong> ${escapeHtml(p.obs)}</div>`;
+  html += `<div class="d-row">🧴 <strong>Nombre:</strong> ${escapeHtml(base)}</div>`;
+  if (p.codigo) html += `<div class="d-row">🪪 <strong>Código id:</strong> ${escapeHtml(p.codigo)}</div>`;
+  if (p.familia || p.familiaOlfativa) html += `<div class="d-row">👃 <strong>Familia olfativa:</strong> ${escapeHtml(p.familia || p.familiaOlfativa)}</div>`;
+  html += `<div class="d-row">📦 <strong>Stock:</strong> ${p.stock ?? 0}</div>`;
+  html += `<div class="d-row">📅 <strong>Fecha:</strong> ${fmtDate(p.fecha)} (${daysAgo(p.fecha)} d)</div>`;
+  if (p.obs) {
+    html += `<div class="d-row" style="margin-top:8px">📝 <strong>Observaciones</strong></div>`;
+    html += `<div style="white-space:pre-wrap;line-height:1.5;margin:4px 0 10px;padding:10px;border-radius:10px;background:var(--card2,#121a22);border:1px solid var(--border);font-size:13px">${escapeHtml(p.obs)}</div>`;
+  }
   if (keys.length) {
-    html += `<div class="section-title" style="margin:12px 0 6px;font-size:13px">Capacidades</div>`;
+    html += `<div class="section-title" style="margin:12px 0 6px;font-size:13px">🧴 Capacidades</div>`;
     keys.forEach(k => {
       const c = caps[k];
       const lab = c.lab || {};
@@ -5438,14 +5442,14 @@ function viewProdDetail(id) {
       </div>`;
     });
   } else {
-    html += `<div class="d-row"><strong>Compra:</strong> ${money(p.compra)} · <strong>Venta:</strong> ${money(p.venta)}</div>`;
+    html += `<div class="d-row">💰 <strong>Compra:</strong> ${money(p.compra)} · <strong>Venta:</strong> ${money(p.venta)}</div>`;
     if (p.lab) {
       const formula = formatLabFormula(p.lab);
       if (formula) html += `<div class="d-row">🔬 ${escapeHtml(formula)}</div>`;
     }
   }
   body.innerHTML = html;
-    setDetailActions('stock', p.id);
+  setDetailActions('stock', p.id);
   modal.classList.add('open');
 }
 stockSearch.oninput = () => renderProducts();
@@ -7239,7 +7243,7 @@ function viewInvDetail(id) {
   } else if (inv.tipo === 'pendiente') {
     html += `<div class="d-row">Sin abonos · Saldo: ${money(saldo)}</div>`;
   }
-  if (inv.obs) html += `<div class="d-row" style="margin-top:6px"><strong>Obs:</strong> ${escapeHtml(inv.obs)}</div>`;
+  if (inv.obs) html += `<div class="d-row" style="margin-top:8px">📝 <strong>Observaciones</strong></div><div style="white-space:pre-wrap;line-height:1.5;margin:4px 0 10px;padding:10px;border-radius:10px;background:var(--card2,#121a22);border:1px solid var(--border);font-size:13px">${escapeHtml(inv.obs)}</div>`;
   if (isProy) {
     if (inv.tiempo) html += `<div class="d-row"><strong>Tiempo:</strong> ${escapeHtml(inv.tiempo)}</div>`;
     if (inv.validez) html += `<div class="d-row"><strong>Validez:</strong> ${escapeHtml(inv.validez)}</div>`;
@@ -10364,107 +10368,25 @@ function viewInsDetail(id) {
   const title = document.getElementById('invDetailTitle');
   const body = document.getElementById('invDetailBody');
   if (!modal || !body) return;
-  const und = i.cat === 'quimico' ? 'g' : 'ud';
-  const catLabel = i.cat === 'quimico' ? 'Químico (gramos)' : 'Implemento (unidades)';
   if (title) title.textContent = '👀 ' + (i.producto || 'Insumo');
   let html = '';
   const imgSrc = (i.img && String(i.img).indexOf('http') === 0) ? i.img : '';
   if (imgSrc) {
-    html += `<div style="margin-bottom:10px;text-align:center"><img src="${imgSrc}" alt="" style="max-width:100%;max-height:200px;object-fit:contain;border-radius:10px;border:1px solid var(--border);background:#0e151d" onerror="this.style.display='none'"></div>`;
-    html += `<div class="d-row" style="font-size:11px;word-break:break-all"><strong>Link:</strong> <a href="${imgSrc}" target="_blank" rel="noopener" style="color:var(--accent)">abrir imagen</a></div>`;
+    html += `<div style="margin-bottom:12px;text-align:center"><img src="${imgSrc}" alt="" style="max-width:100%;max-height:180px;object-fit:contain;border-radius:12px;border:1px solid var(--border);background:#0e151d" onerror="this.style.display='none'"></div>`;
   }
-  html += `<div class="d-row"><strong>Nombre:</strong> ${escapeHtml(i.producto || '')}</div>`;
-  if (i.codigo) html += `<div class="d-row"><strong>🪪 Código id:</strong> ${escapeHtml(i.codigo)}</div>`;
-  html += `<div class="d-row"><strong>Categoría:</strong> ${escapeHtml(catLabel)}</div>`;
-  html += `<div class="d-row"><strong>Precio base:</strong> $ ${formatMoneyInput(i.precio)} / ${und}</div>`;
-  html += `<div class="d-row"><strong>Stock:</strong> ${i.stock ?? 0} ${und}</div>`;
+  html += `<div class="d-row">🧴 <strong>Nombre:</strong> ${escapeHtml(i.producto || '')}</div>`;
+  if (i.codigo) html += `<div class="d-row">🪪 <strong>Código id:</strong> ${escapeHtml(i.codigo)}</div>`;
+  html += `<div class="d-row">🏷️ <strong>Tipo:</strong> ${i.cat === 'implemento' ? 'Implemento (ud)' : 'Químico (g)'}</div>`;
   if (i.familia || i.familiaOlfativa) html += `<div class="d-row">👃 <strong>Familia olfativa:</strong> ${escapeHtml(i.familia || i.familiaOlfativa)}</div>`;
-  if (i.obs) html += `<div class="d-row">📝 <strong>Observaciones</strong><div style="white-space:pre-wrap;margin-top:6px;line-height:1.45">${escapeHtml(i.obs)}</div></div>`;
-  const provs = i.proveedores || [];
-  if (provs.length) {
-    html += `<div class="section-title" style="margin:12px 0 6px;font-size:13px">Proveedores</div>`;
-    provs.forEach(pv => {
-      const p = (proveedores || []).find(x => +x.id === +pv.id);
-      const name = (p && p.nombre) || pv.nombre || ('#' + pv.id);
-      html += `<div class="d-row">🏭 <strong>${escapeHtml(name)}</strong> · ${money(pv.precio)} / ${und}</div>`;
-    });
-  } else {
-    html += `<div class="d-row" style="color:var(--muted)">Sin proveedores vinculados</div>`;
+  html += `<div class="d-row">📦 <strong>Stock:</strong> ${i.stock ?? 0}</div>`;
+  html += `<div class="d-row">💰 <strong>Precio:</strong> ${money(i.precio)}</div>`;
+  if (i.obs) {
+    html += `<div class="d-row" style="margin-top:8px">📝 <strong>Observaciones</strong></div>`;
+    html += `<div style="white-space:pre-wrap;line-height:1.5;margin:4px 0 10px;padding:10px;border-radius:10px;background:var(--card2,#121a22);border:1px solid var(--border);font-size:13px">${escapeHtml(i.obs)}</div>`;
   }
   body.innerHTML = html;
-    setDetailActions('insumo', i.id);
+  try { setDetailActions('insumo', i.id); } catch (e) {}
   modal.classList.add('open');
-}
-function waInsObs(id) {
-  const i = (insumos || []).find(x => +x.id === +id);
-  if (!i) return;
-  const obs = (i.obs || '').trim();
-  if (!obs) return toast('Sin observaciones para enviar');
-  const und = i.cat === 'quimico' ? 'g' : 'ud';
-  const name = i.producto || 'Insumo';
-  const text = encodeURIComponent('*' + name + '* (' + und + ')\nPrecio base: $ ' + formatMoneyInput(i.precio) + ' / ' + und + '\n\n' + obs);
-  window.open('https://wa.me/?text=' + text, '_blank');
-}
-
-function renderInsumos() {
-  try { updateInsumosMoneyHint(); } catch (e) {}
-  const q = ((document.getElementById('insSearch') || {}).value || '').toLowerCase();
-  const cat = (document.getElementById('insFilterCat') || {}).value || '';
-  let list = (insumos || []).slice();
-  if (cat) list = list.filter(i => i.cat === cat);
-  if (q) list = list.filter(i => {
-    const name = (i.producto || '').toLowerCase();
-    const cod = (i.codigo || '').toLowerCase();
-    const fam = (i.familia || i.familiaOlfativa || '').toLowerCase();
-    return name.includes(q) || cod.includes(q) || fam.includes(q);
-  });
-  const sortMode = ((document.getElementById('insSort') || {}).value) || 'name';
-  list.sort((a, b) => {
-    if (sortMode === 'code') {
-      const ca = String(a.codigo || '');
-      const cb = String(b.codigo || '');
-      // iq/ii + número ascendente
-      const ma = ca.match(/^(iq|ii)-?(\d+)$/i);
-      const mb = cb.match(/^(iq|ii)-?(\d+)$/i);
-      if (ma && mb) {
-        if (ma[1].toLowerCase() !== mb[1].toLowerCase()) return ma[1].toLowerCase().localeCompare(mb[1].toLowerCase());
-        return (parseInt(ma[2], 10) || 0) - (parseInt(mb[2], 10) || 0);
-      }
-      if (ma && !mb) return -1;
-      if (!ma && mb) return 1;
-      return ca.localeCompare(cb, 'es', { numeric: true, sensitivity: 'base' });
-    }
-    return String(a.producto || '').localeCompare(String(b.producto || ''), 'es', { sensitivity: 'base' });
-  });
-  const el = document.getElementById('insList');
-  if (!el) return;
-  el.innerHTML = list.length
-    ? list.map(i => {
-        const und = i.cat === 'quimico' ? 'g' : 'ud';
-        const obs = (i.obs || '').trim();
-        const provLines = (i.proveedores || []).map(pv => {
-          const p = (proveedores || []).find(x => +x.id === +pv.id);
-          const name = (p && p.nombre) || pv.nombre || ('Proveedor #' + pv.id);
-          return `<div class="line">🏭 <strong>${escapeHtml(name)}</strong> · ${money(pv.precio)} / ${und}</div>`;
-        }).join('');
-        const icod = (i.codigo || '').trim();
-        return `<div class="list-card" data-ins-id="${i.id}">
-          <div class="title">${escapeHtml(i.producto)} <span class="chip" style="background:#1a2a3d;color:var(--accent)">${und}</span></div>
-          ${icod ? `<div class="line">🪪 <strong>${escapeHtml(icod)}</strong></div>` : ''}
-          <div class="line">Precio base: <strong>$ ${formatMoneyInput(i.precio)}</strong> / ${und} · Stock: <strong>${i.stock || 0}</strong></div>
-          ${provLines || '<div class="line" style="color:var(--muted)">🏭 Sin proveedores anotados</div>'}
-          ${(i.familia || i.familiaOlfativa) ? `<div class="line">👃 ${escapeHtml(i.familia || i.familiaOlfativa)}</div>` : ''}
-          ${obs ? `<div class="line">📝 ${escapeHtml(obs)}</div>` : ''}
-          <div class="row-actions" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap">
-            <button type="button" class="sm warn" onclick="viewInsDetail(${i.id})" title="Ver detalles">👀</button>
-            <button type="button" class="sm success" onclick="showInsQr(${i.id})" title="QR sticker">📷 QR</button>
-            <button type="button" class="sm success" onclick="waInsObs(${i.id})" title="WhatsApp observaciones">📲</button>
-            <button type="button" class="sm warn" onclick="editInsumo(${i.id})" class="warn">✏️</button>
-            <button type="button" class="sm danger" onclick="delInsumo(${i.id})">🗑️</button>
-          </div>
-        </div>`;
-      }).join('')
-    : '<div class="empty">Sin insumos</div>';
 }
 function openInsForm(isNew) {
   const panel = document.getElementById('insForm');
