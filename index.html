@@ -1609,7 +1609,7 @@ header #empresaSelect{
       <div class="section-title" style="margin:0 0 8px">📦 Stock de productos</div>
       <div class="sticky-search">
         <div class="actions">
-          <input id="stockSearch" placeholder="Filtrar nombre o código...">
+          <input id="stockSearch" placeholder="Buscar nombre, código o familia...">
           <select id="stockSort" title="Ordenar">
             <option value="name">Nombre A–Z</option>
             <option value="code">Código id ↑</option>
@@ -1682,7 +1682,7 @@ header #empresaSelect{
       <div class="section-title" style="margin:0 0 8px">🧪 Insumos / Implementos</div>
       <div class="sticky-search">
         <div class="actions" style="grid-template-columns:1fr auto auto;gap:6px">
-          <input id="insSearch" placeholder="Buscar nombre, código, familia, obs...">
+          <input id="insSearch" placeholder="Buscar nombre, código o familia...">
           <select id="insFilterCat" title="Categoría" style="min-width:110px">
             <option value="">Todas</option>
             <option value="quimico">Químico (g)</option>
@@ -4918,8 +4918,7 @@ function renderProducts() {
     .filter(p => {
       const code = (p.codigo || '').toLowerCase();
       const fam = (p.familia || p.familiaOlfativa || '').toLowerCase();
-      const obs = (p.obs || '').toLowerCase();
-      return !q || (p.name || '').toLowerCase().includes(q) || basePerfumeName(p.name).toLowerCase().includes(q) || code.includes(q) || fam.includes(q) || obs.includes(q);
+      return !q || (p.name || '').toLowerCase().includes(q) || basePerfumeName(p.name).toLowerCase().includes(q) || code.includes(q) || fam.includes(q);
     })
     .sort((a, b) => {
       if (sortMode === 'code') {
@@ -10331,11 +10330,9 @@ function renderInsumos() {
   if (cat) list = list.filter(i => i.cat === cat);
   if (q) list = list.filter(i => {
     const name = (i.producto || '').toLowerCase();
-    const obs = (i.obs || '').toLowerCase();
     const cod = (i.codigo || '').toLowerCase();
     const fam = (i.familia || i.familiaOlfativa || '').toLowerCase();
-    const provNames = (i.proveedores || []).map(function(pv){ return (pv.nombre || '').toLowerCase(); }).join(' ');
-    return name.includes(q) || obs.includes(q) || cod.includes(q) || fam.includes(q) || provNames.includes(q);
+    return name.includes(q) || cod.includes(q) || fam.includes(q);
   });
   const sortMode = ((document.getElementById('insSort') || {}).value) || 'name';
   list.sort((a, b) => {
