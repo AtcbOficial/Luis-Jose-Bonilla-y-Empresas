@@ -246,14 +246,6 @@ nav button.active{color:var(--accent)}
 .detail-modal-box h3{margin:0 0 10px;font-size:16px}
 .detail-modal-box .d-row{font-size:13px;margin:4px 0;line-height:1.4}
 .detail-modal-box .d-row strong{color:var(--text)}
-
-.detail-modal-box .d-sep{height:1px;background:var(--border);margin:10px 0;opacity:.85}
-.detail-modal-box .d-block{
-  white-space:pre-wrap;line-height:1.5;margin:4px 0 10px;padding:10px;
-  border-radius:10px;background:#0e151d;border:1px solid var(--border);font-size:13px
-}
-.detail-modal-box .d-row{font-size:13px;margin:5px 0;line-height:1.4}
-
 .detail-modal-box table{width:100%;border-collapse:collapse;font-size:12px;margin:8px 0}
 .detail-modal-box th,.detail-modal-box td{border-bottom:1px solid var(--border);padding:6px 4px;text-align:left}
 .detail-modal-box th{color:var(--muted);font-size:11px}
@@ -1660,10 +1652,7 @@ header #empresaSelect{
         <option value="implemento">Implemento (unidades)</option>
       </select>
       <input id="insProd" placeholder="Nombre del producto" style="margin-bottom:6px">
-      <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
-        <input id="insCodigo" placeholder="Auto: iq-0001 / ii-0001" style="flex:1;margin:0;text-transform:uppercase" autocomplete="off">
-        <button type="button" class="sm warn" id="btnUnlockInsCodigo" title="Editar código id">✏️</button>
-      </div>
+      <input id="insCodigo" placeholder="Auto: iq-0001 / ii-0001 (editable)" style="margin-bottom:6px;text-transform:uppercase" autocomplete="off">
       <p class="hint" style="margin:0 0 6px">Químico <code>iq-0001</code> · Implemento <code>ii-0001</code></p>
       <label class="label">Link imagen (https://…)</label>
       <input type="url" id="insImgUrl" placeholder="https://… foto del insumo" style="margin-bottom:4px">
@@ -5410,32 +5399,6 @@ function detailImgHtml(url) {
     '" alt="" style="max-width:100%;max-height:180px;border-radius:12px;border:1px solid var(--border);object-fit:contain" onerror="this.style.display=\'none\'"></div>';
 }
 
-
-function dRow(emoji, label, value) {
-  if (value == null || value === '') return '';
-  return '<div class="d-row">' + (emoji ? emoji + ' ' : '') +
-    '<strong>' + escapeHtml(label) + ':</strong> ' + value + '</div>';
-}
-function dSep() { return '<div class="d-sep"></div>'; }
-function dBlock(titleEmoji, title, text) {
-  if (!text) return '';
-  return '<div class="d-row" style="margin-top:8px">' + (titleEmoji || '📝') + ' <strong>' +
-    escapeHtml(title || 'Observaciones') + '</strong></div>' +
-    '<div class="d-block">' + escapeHtml(String(text)) + '</div>';
-}
-function dImg(url) {
-  if (!url) return '';
-  const safe = String(url);
-  if (safe.indexOf('http') !== 0 && safe.indexOf('data:image') !== 0) return '';
-  let html = '<div style="margin-bottom:12px;text-align:center"><img src="' + safe +
-    '" alt="" style="max-width:100%;max-height:200px;object-fit:contain;border-radius:12px;border:1px solid var(--border);background:#0e151d" onerror="this.style.display=\'none\'"></div>';
-  if (safe.indexOf('http') === 0) {
-    html += '<div class="d-row" style="font-size:11px;word-break:break-all">🔗 <strong>Link:</strong> <a href="' +
-      safe + '" target="_blank" rel="noopener" style="color:var(--accent)">abrir imagen</a></div>';
-  }
-  return html;
-}
-
 function viewProdDetail(id) {
   const p = products.find(x => x.id === id);
   if (!p) return;
@@ -5448,41 +5411,48 @@ function viewProdDetail(id) {
   if (title) title.textContent = '👀 ' + (base || 'Producto');
   const caps = getProductCaps(p);
   const keys = Object.keys(caps).sort((a,b)=>+a-+b);
+  let html = '';
   const imgSrc = (p.img && (String(p.img).indexOf('http') === 0 || String(p.img).indexOf('data:image') === 0)) ? p.img : '';
-  let html = dImg(imgSrc);
-  html += dRow('🧴', 'Nombre', escapeHtml(base || ''));
-  if (p.codigo) html += dRow('🪪', 'Código id', escapeHtml(p.codigo));
-  if (p.familia || p.familiaOlfativa) html += dRow('👃', 'Familia olfativa', escapeHtml(p.familia || p.familiaOlfativa));
-  html += dRow('📦', 'Stock', String(p.stock ?? 0));
-  html += dRow('📅', 'Fecha', escapeHtml(fmtDate(p.fecha) + ' (' + daysAgo(p.fecha) + ' d)'));
-  html += dSep();
-  html += dBlock('📝', 'Observaciones', p.obs || '');
+  if (imgSrc) {
+    html += `<div style="margin-bottom:10px;text-align:center"><img src="${imgSrc}" alt="" style="max-width:100%;max-height:200px;object-fit:contain;border-radius:10px;border:1px solid var(--border);background:#0e151d" onerror="this.style.display='none'"></div>`;
+    if (String(imgSrc).indexOf('http') === 0) {
+      html += `<div class="d-row" style="font-size:11px;word-break:break-all"><strong>Link:</strong> <a href="${imgSrc}" target="_blank" rel="noopener" style="color:var(--accent)">abrir imagen</a></div>`;
+    }
+  }
+  html += `<div class="d-row">🧴 <strong>Nombre:</strong> ${escapeHtml(base)}</div>`;
+  if (p.codigo) html += `<div class="d-row">🪪 <strong>Código id:</strong> ${escapeHtml(p.codigo)}</div>`;
+  if (p.familia || p.familiaOlfativa) html += `<div class="d-row">👃 <strong>Familia olfativa:</strong> ${escapeHtml(p.familia || p.familiaOlfativa)}</div>`;
+  html += `<div class="d-row">📦 <strong>Stock:</strong> ${p.stock ?? 0}</div>`;
+  html += `<div class="d-row">📅 <strong>Fecha:</strong> ${fmtDate(p.fecha)} (${daysAgo(p.fecha)} d)</div>`;
+  if (p.obs) {
+    html += `<div class="d-row" style="margin-top:8px">📝 <strong>Observaciones</strong></div>`;
+    html += `<div style="white-space:pre-wrap;line-height:1.5;margin:4px 0 10px;padding:10px;border-radius:10px;background:#0e151d;border:1px solid var(--border);font-size:13px">${escapeHtml(p.obs)}</div>`;
+  }
   if (keys.length) {
-    html += dSep();
-    html += `<div class="section-title" style="margin:8px 0 6px;font-size:13px">🧴 Capacidades</div>`;
+    html += `<div class="section-title" style="margin:12px 0 6px;font-size:13px">Capacidades</div>`;
     keys.forEach(k => {
       const c = caps[k];
       const lab = c.lab || {};
       const formula = formatLabFormula(lab);
       html += `<div class="list-card" style="margin-bottom:8px">
         <div class="title">${k} ml</div>
-        <div class="line">💰 Compra <strong>${money(c.compra)}</strong> · Venta <strong>${money(c.venta)}</strong></div>
+        <div class="line">Compra <strong>${money(c.compra)}</strong> · Venta <strong>${money(c.venta)}</strong></div>
         ${lab.margen != null ? `<div class="line">Margen <strong>${lab.margen}%</strong></div>` : ''}
         ${formula ? `<div class="line">🔬 ${escapeHtml(formula)}</div>` : '<div class="line" style="color:var(--muted)">Sin fórmula</div>'}
       </div>`;
     });
   } else {
-    html += dRow('💰', 'Compra / Venta', money(p.compra) + ' · ' + money(p.venta));
+    html += `<div class="d-row">💰 <strong>Compra:</strong> ${money(p.compra)} · <strong>Venta:</strong> ${money(p.venta)}</div>`;
     if (p.lab) {
       const formula = formatLabFormula(p.lab);
-      if (formula) html += dRow('🔬', 'Fórmula', escapeHtml(formula));
+      if (formula) html += `<div class="d-row">🔬 ${escapeHtml(formula)}</div>`;
     }
   }
   body.innerHTML = html;
-  setDetailActions('stock', p.id);
+    setDetailActions('stock', p.id);
   modal.classList.add('open');
 }
-stockSearchstockSearch.oninput = () => renderProducts();
+stockSearch.oninput = () => renderProducts();
 const _stockSort = document.getElementById('stockSort');
 if (_stockSort) _stockSort.onchange = () => renderProducts();
 (function bindStockExport() {
@@ -5532,14 +5502,33 @@ function viewCliDetail(id) {
   if (!modal || !body) return;
   if (title) title.textContent = '👀 ' + (c.nombre || 'Cliente');
   let html = '';
-  html += dRow('👤', 'Nombre', escapeHtml(c.nombre || ''));
-  html += dRow('🪪', 'Documento / NIT', escapeHtml(c.documento || '—'));
-  html += dRow('📞', 'Teléfono', escapeHtml(c.telefono || '—'));
-  html += dRow('📍', 'Dirección', escapeHtml(c.direccion || '—'));
-  html += dRow('✉️', 'Email', escapeHtml(c.email || '—'));
-  html += dRow('📅', 'Fecha', escapeHtml(fmtDate(c.fecha) + ' (' + daysAgo(c.fecha) + ' d)'));
-  html += dSep();
-  html += dBlock('📝', 'Observaciones', c.obs || '');
+  html += `<div class="d-row">👤 <strong>Nombre:</strong> ${escapeHtml(c.nombre || '')}</div>`;
+  html += `<div class="d-row">🪪 <strong>Documento / NIT:</strong> ${escapeHtml(c.documento || '—')}</div>`;
+  html += `<div class="d-row">📞 <strong>Teléfono:</strong> ${escapeHtml(c.telefono || '—')}</div>`;
+  html += `<div class="d-row">📍 <strong>Dirección:</strong> ${escapeHtml(c.direccion || '—')}</div>`;
+  html += `<div class="d-row">✉️ <strong>Email:</strong> ${escapeHtml(c.email || '—')}</div>`;
+  html += `<div class="d-row">📅 <strong>Fecha:</strong> ${fmtDate(c.fecha)} (${daysAgo(c.fecha)} d)</div>`;
+  if (c.obs) html += `<div class="d-row">📝 <strong>Observaciones</strong><div style="white-space:pre-wrap;margin-top:6px;line-height:1.45">${escapeHtml(c.obs)}</div></div>`;
+  const related = (invoices || []).filter(inv => {
+    const n = (inv.cliente || '').toLowerCase().trim();
+    const cn = (c.nombre || '').toLowerCase().trim();
+    if (n && cn && n === cn) return true;
+    if (c.documento && inv.doc && String(c.documento).trim() === String(inv.doc).trim()) return true;
+    if (c.telefono && inv.tel && telDigits(c.telefono) === telDigits(inv.tel)) return true;
+    return false;
+  }).sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
+  if (related.length) {
+    html += `<div class="section-title" style="margin:12px 0 6px;font-size:13px">Facturas / proyectos (${related.length})</div>`;
+    related.slice(0, 30).forEach(inv => {
+      const emp = (inv.empresa === 'perfumes') ? '🧴' : '🧊';
+      const st = inv.tipo || 'pendiente';
+      const tot = typeof invTotal === 'function' ? invTotal(inv) : (inv.total || 0);
+      html += `<div class="d-row">${emp} <strong>#${inv.numero || inv.id}</strong> · ${fmtDate(inv.fecha)} · ${escapeHtml(st)} · ${money(tot)}</div>`;
+    });
+    if (related.length > 30) html += `<div class="d-row" style="color:var(--muted)">… y ${related.length - 30} más</div>`;
+  } else {
+    html += `<div class="d-row" style="color:var(--muted)">Sin facturas vinculadas por nombre/doc/tel</div>`;
+  }
   body.innerHTML = html;
     setDetailActions('cliente', c.id);
   modal.classList.add('open');
@@ -5647,15 +5636,26 @@ function viewProvDetail(id) {
   let web = (v.web || '').trim();
   if (web && !/^https?:\/\//i.test(web)) web = 'https://' + web;
   let html = '';
-  html += dRow('🏭', 'Nombre', escapeHtml(v.nombre || ''));
-  html += dRow('🪪', 'Documento / NIT', escapeHtml(v.documento || '—'));
-  html += dRow('📞', 'Teléfono', escapeHtml(v.telefono || '—'));
-  html += dRow('📍', 'Dirección', escapeHtml(v.direccion || '—'));
-  html += dRow('✉️', 'Email', escapeHtml(v.email || '—'));
-  if (web) html += dRow('🌐', 'Web', '<a href="' + escapeHtml(web) + '" target="_blank" rel="noopener" style="color:var(--accent)">' + escapeHtml(web) + '</a>');
-  html += dRow('📅', 'Fecha', escapeHtml(fmtDate(v.fecha) + ' (' + daysAgo(v.fecha) + ' d)'));
-  html += dSep();
-  html += dBlock('📝', 'Observaciones', v.obs || '');
+  html += `<div class="d-row">🏭 <strong>Nombre:</strong> ${escapeHtml(v.nombre || '')}</div>`;
+  html += `<div class="d-row"><strong>Documento / NIT:</strong> ${escapeHtml(v.documento || '—')}</div>`;
+  html += `<div class="d-row"><strong>Teléfono:</strong> ${escapeHtml(v.telefono || '—')}</div>`;
+  html += `<div class="d-row"><strong>Dirección:</strong> ${escapeHtml(v.direccion || '—')}</div>`;
+  html += `<div class="d-row"><strong>Email:</strong> ${escapeHtml(v.email || '—')}</div>`;
+  if (web) html += `<div class="d-row"><strong>Web:</strong> <a href="${escapeHtml(web)}" target="_blank" rel="noopener" style="color:var(--accent)">${escapeHtml(v.web || web)}</a></div>`;
+  html += `<div class="d-row"><strong>Fecha:</strong> ${fmtDate(v.fecha)} (${daysAgo(v.fecha)} d)</div>`;
+  html += `<div class="d-row"><strong>Empresa:</strong> ${escapeHtml((v.empresa === 'perfumes') ? 'Perfumes L&R' : 'AtcbOficial')}</div>`;
+  if (v.obs) html += `<div class="d-row">📝 <strong>Observaciones</strong><div style="white-space:pre-wrap;margin-top:6px;line-height:1.45">${escapeHtml(v.obs)}</div></div>`;
+  // Insumos que ofrece este proveedor
+  const offers = (insumos || []).filter(ins => (ins.proveedores || []).some(pv => +pv.id === +v.id));
+  if (offers.length) {
+    html += `<div class="section-title" style="margin:12px 0 6px;font-size:13px">Insumos que ofrece (${offers.length})</div>`;
+    offers.forEach(ins => {
+      const und = ins.cat === 'quimico' ? 'g' : 'ud';
+      const pv = (ins.proveedores || []).find(x => +x.id === +v.id);
+      const precio = pv ? money(pv.precio) : '—';
+      html += `<div class="d-row">🧪 <strong>${escapeHtml(ins.producto || '')}</strong> · ${precio} / ${und}</div>`;
+    });
+  }
   body.innerHTML = html;
   modal.classList.add('open');
 }
@@ -7243,7 +7243,10 @@ function viewInvDetail(id) {
   } else if (inv.tipo === 'pendiente') {
     html += `<div class="d-row">Sin abonos · Saldo: ${money(saldo)}</div>`;
   }
-  if (inv.obs) { html += dSep(); html += dBlock('📝', 'Observaciones', inv.obs); }
+  if (inv.obs) {
+    html += `<div class="d-row" style="margin-top:8px">📝 <strong>Observaciones</strong></div>`;
+    html += `<div style="white-space:pre-wrap;line-height:1.5;margin:4px 0 10px;padding:10px;border-radius:10px;background:#0e151d;border:1px solid var(--border);font-size:13px">${escapeHtml(inv.obs)}</div>`;
+  }
   if (isProy) {
     if (inv.tiempo) html += `<div class="d-row"><strong>Tiempo:</strong> ${escapeHtml(inv.tiempo)}</div>`;
     if (inv.validez) html += `<div class="d-row"><strong>Validez:</strong> ${escapeHtml(inv.validez)}</div>`;
@@ -10371,30 +10374,35 @@ function viewInsDetail(id) {
   const und = i.cat === 'quimico' ? 'g' : 'ud';
   const catLabel = i.cat === 'quimico' ? 'Químico (gramos)' : 'Implemento (unidades)';
   if (title) title.textContent = '👀 ' + (i.producto || 'Insumo');
+  let html = '';
   const imgSrc = (i.img && String(i.img).indexOf('http') === 0) ? i.img : '';
-  let html = dImg(imgSrc);
-  html += dRow('🧴', 'Nombre', escapeHtml(i.producto || ''));
-  if (i.codigo) html += dRow('🪪', 'Código id', escapeHtml(i.codigo));
-  html += dRow('🏷️', 'Categoría', escapeHtml(catLabel));
-  if (i.familia || i.familiaOlfativa) html += dRow('👃', 'Familia olfativa', escapeHtml(i.familia || i.familiaOlfativa));
-  html += dRow('💰', 'Precio base', '$ ' + formatMoneyInput(i.precio) + ' / ' + und);
-  html += dRow('📦', 'Stock', String(i.stock ?? 0) + ' ' + und);
-  html += dSep();
-  html += dBlock('📝', 'Observaciones', i.obs || '');
+  if (imgSrc) {
+    html += `<div style="margin-bottom:10px;text-align:center"><img src="${imgSrc}" alt="" style="max-width:100%;max-height:200px;object-fit:contain;border-radius:10px;border:1px solid var(--border);background:#0e151d" onerror="this.style.display='none'"></div>`;
+    html += `<div class="d-row" style="font-size:11px;word-break:break-all"><strong>Link:</strong> <a href="${imgSrc}" target="_blank" rel="noopener" style="color:var(--accent)">abrir imagen</a></div>`;
+  }
+  html += `<div class="d-row">🧴 <strong>Nombre:</strong> ${escapeHtml(i.producto || '')}</div>`;
+  if (i.codigo) html += `<div class="d-row">🪪 <strong>Código id:</strong> ${escapeHtml(i.codigo)}</div>`;
+  html += `<div class="d-row">🏷️ <strong>Categoría:</strong> ${escapeHtml(catLabel)}</div>`;
+  html += `<div class="d-row">💰 <strong>Precio base:</strong> $ ${formatMoneyInput(i.precio)} / ${und}</div>`;
+  html += `<div class="d-row">📦 <strong>Stock:</strong> ${i.stock ?? 0} ${und}</div>`;
+  if (i.familia || i.familiaOlfativa) html += `<div class="d-row">👃 <strong>Familia olfativa:</strong> ${escapeHtml(i.familia || i.familiaOlfativa)}</div>`;
+  if (i.obs) {
+    html += `<div class="d-row" style="margin-top:8px">📝 <strong>Observaciones</strong></div>`;
+    html += `<div style="white-space:pre-wrap;line-height:1.5;margin:4px 0 10px;padding:10px;border-radius:10px;background:#0e151d;border:1px solid var(--border);font-size:13px">${escapeHtml(i.obs)}</div>`;
+  }
   const provs = i.proveedores || [];
   if (provs.length) {
-    html += dSep();
-    html += `<div class="section-title" style="margin:8px 0 6px;font-size:13px">🏭 Proveedores</div>`;
+    html += `<div class="section-title" style="margin:12px 0 6px;font-size:13px">Proveedores</div>`;
     provs.forEach(pv => {
       const p = (proveedores || []).find(x => +x.id === +pv.id);
       const name = (p && p.nombre) || pv.nombre || ('#' + pv.id);
-      html += dRow('·', name, money(pv.precio) + ' / ' + und);
+      html += `<div class="d-row">🏭 <strong>${escapeHtml(name)}</strong> · ${money(pv.precio)} / ${und}</div>`;
     });
   } else {
-    html += '<div class="d-row" style="color:var(--muted)">🏭 Sin proveedores vinculados</div>';
+    html += `<div class="d-row" style="color:var(--muted)">Sin proveedores vinculados</div>`;
   }
   body.innerHTML = html;
-  try { setDetailActions('insumo', i.id); } catch (e) {}
+    setDetailActions('insumo', i.id);
   modal.classList.add('open');
 }
 function waInsObs(id) {
@@ -10482,12 +10490,7 @@ function openInsForm(isNew) {
     const fam = document.getElementById('insFamilia'); if (fam) fam.value = '';
     const obs = document.getElementById('insObs'); if (obs) obs.value = '';
     const ic = document.getElementById('insCodigo');
-    if (ic) {
-      ic.value = nextInsCodigo('quimico');
-      ic.readOnly = false;
-      ic.dataset.origCodigo = '';
-      ic.title = 'Se asigna solo; puedes ajustarlo si hace falta';
-    }
+    if (ic) ic.value = nextInsCodigo('quimico');
     const iu = document.getElementById('insImgUrl'); if (iu) iu.value = '';
     const ip = document.getElementById('insImgPreview'); if (ip) { ip.src = ''; ip.classList.remove('show'); }
     insProvOffers = [];
@@ -10506,13 +10509,7 @@ function editInsumo(id) {
   document.getElementById('insStock').value = i.stock || 0;
   const fam = document.getElementById('insFamilia'); if (fam) fam.value = i.familia || i.familiaOlfativa || '';
   const obs = document.getElementById('insObs'); if (obs) obs.value = i.obs || '';
-  const ic = document.getElementById('insCodigo');
-  if (ic) {
-    ic.value = i.codigo || '';
-    ic.dataset.origCodigo = i.codigo || '';
-    ic.readOnly = true;
-    ic.title = 'Código bloqueado · toca ✏️ para editar';
-  }
+  const ic = document.getElementById('insCodigo'); if (ic) ic.value = i.codigo || '';
   const iu = document.getElementById('insImgUrl');
   const imgv = (i.img && String(i.img).indexOf('http') === 0) ? i.img : '';
   if (iu) iu.value = imgv;
@@ -10534,16 +10531,8 @@ async function saveInsumo() {
   const cat = document.getElementById('insCat').value || 'quimico';
   let codigo = normInsCodigo((document.getElementById('insCodigo') || {}).value || '');
   if (!codigo) codigo = nextInsCodigo(cat);
-  const icEl = document.getElementById('insCodigo');
-  const origInsCod = icEl ? (icEl.dataset.origCodigo || '') : '';
-  if (insEditingId != null && origInsCod && normInsCodigo(origInsCod) !== codigo) {
-    if (!confirm('Vas a cambiar el código id de ' + origInsCod + ' a ' + codigo + '.\n¿Continuar?')) {
-      if (icEl) { icEl.value = origInsCod; icEl.readOnly = true; }
-      return;
-    }
-  }
   if (isInsCodigoTaken(codigo, insEditingId)) return toast('Código id "' + codigo + '" ya existe en otro insumo');
-  if (icEl) icEl.value = codigo;
+  const icEl = document.getElementById('insCodigo'); if (icEl) icEl.value = codigo;
   let img = ((document.getElementById('insImgUrl') || {}).value || '').trim();
   if (img.indexOf('data:') === 0) img = '';
   if (img && img.indexOf('http') !== 0) img = '';
@@ -10894,21 +10883,6 @@ function clearLab() {
   const fCat = document.getElementById('insFilterCat');
   const bAddP = document.getElementById('btnAddInsProv');
   if (bNew) bNew.onclick = () => openInsForm(true);
-  const buIns = document.getElementById('btnUnlockInsCodigo');
-  if (buIns && !buIns._bound) {
-    buIns._bound = 1;
-    buIns.onclick = function () {
-      const ic = document.getElementById('insCodigo');
-      if (!ic) return;
-      if (ic.readOnly) {
-        if (!confirm('¿Editar el código id del insumo?')) return;
-        ic.readOnly = false;
-        ic.focus();
-        toast('Código de insumo editable');
-      }
-    };
-  }
-
   const insCatEl = document.getElementById('insCat');
   if (insCatEl && !insCatEl._codeBound) {
     insCatEl._codeBound = 1;
