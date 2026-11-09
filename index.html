@@ -1093,8 +1093,9 @@ header #empresaSelect{
       <summary>💱 Tasa de cambios</summary>
       <div class="body">
         <div id="homeFxList" class="fx-list"></div>
-        <div class="actions" style="margin-top:8px">
+        <div class="actions3" style="margin-top:8px">
           <button type="button" id="btnFxRefresh" class="success sm">🔄 Actualizar APIs</button>
+          <button type="button" id="btnFxShare" class="success sm">📲 Compartir</button>
           <button type="button" id="btnFxGoArchivo" class="warn sm">✏️ Editar en Archivo</button>
         </div>
         <p class="hint" id="homeFxStatus" style="margin:6px 0 0"></p>
@@ -2002,6 +2003,20 @@ header #empresaSelect{
           <input id="setCodigoNext" readonly style="opacity:.85" title="Se calcula solo"></div>
         </div>
         <p class="hint" style="margin:4px 0 8px">El prefijo identifica la empresa (Atcb=1, Perfumes=2). El número siguiente se asigna solo al crear. No cambies el código de productos ya exportados al catálogo.</p>
+        <div id="insCodigoArchivoBox" style="display:none;margin:8px 0;padding:10px;border:1px solid var(--border);border-radius:10px;background:#0e151d">
+          <div class="label" style="margin-bottom:6px">🪪 Códigos id · Insumos (Perfumes L&R)</div>
+          <div class="grid2" style="gap:8px">
+            <div>
+              <label class="label">Próximo químico (iq-)</label>
+              <input id="setInsNextIq" readonly style="opacity:.9" title="Se calcula solo">
+            </div>
+            <div>
+              <label class="label">Próximo implemento (ii-)</label>
+              <input id="setInsNextIi" readonly style="opacity:.9" title="Se calcula solo">
+            </div>
+          </div>
+          <p class="hint" style="margin:6px 0 0">Prefijos fijos: <strong>iq-</strong> esencias/químicos · <strong>ii-</strong> implementos. Al crear un insumo se asigna el siguiente libre. No hace falta editarlos a mano.</p>
+        </div>
         <p class="hint" style="margin:0 0 8px">Nombre comercial de la empresa activa (selector, encabezado, libro). Puedes cambiarlo cuando quieras.</p>
         <div class="form-row"><label class="label">Nombre / Razón social · PDF, térmica, WA, CxC</label>
           <input id="setName" placeholder="Ej. Luis Jose Bonilla"></div>
@@ -3321,6 +3336,12 @@ function syncSettingsUI() {
   if (scp) scp.value = e.codigoPrefix || empCodigoPrefix(activeEmpresa);
   const scn = document.getElementById('setCodigoNext');
   if (scn) scn.value = (typeof nextCodigoId === 'function' ? nextCodigoId(activeEmpresa) : '');
+  const insBox = document.getElementById('insCodigoArchivoBox');
+  if (insBox) insBox.style.display = (activeEmpresa === EMPRESA_PERFUMES) ? '' : 'none';
+  const siq = document.getElementById('setInsNextIq');
+  const sii = document.getElementById('setInsNextIi');
+  if (siq && typeof nextInsCodigo === 'function') siq.value = nextInsCodigo('quimico');
+  if (sii && typeof nextInsCodigo === 'function') sii.value = nextInsCodigo('implemento');
   setName.value = e.name || '';
   const scu = document.getElementById('setCatalogUrl');
   if (scu) scu.value = e.catalogUrl || '';
@@ -11350,13 +11371,49 @@ async function fxFetchApi(silent) {
   return ok > 0;
 }
 
+
+function fxShareRates() {
+  try {
+    ensureFx();
+    const rates = (settings.fx && settings.fx.rates) || [];
+    if (!rates.length) return toast('Sin tasas para compartir');
+    const lines = rates.map(function (r) {
+      return (r.emoji || '💱') + ' ' + (r.name || r.code || '') + ': ' + money(r.rate || 0);
+    });
+    const text = '💱 Tasa de cambios\\n' + lines.join('\\n') + '\\n\\n' + new Date().toLocaleString();
+    if (navigator.share) {
+      navigator.share({ title: 'Tasa de cambios', text: text }).catch(function () {
+        try {
+          navigator.clipboard.writeText(text);
+          toast('Tasas copiadas al portapapeles');
+        } catch (e2) {
+          window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+        }
+      });
+    } else {
+      try {
+        navigator.clipboard.writeText(text);
+        toast('Tasas copiadas · también puedes enviar por WA');
+        window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+      } catch (e3) {
+        window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+      }
+    }
+  } catch (e) {
+    console.warn(e);
+    toast('No se pudo compartir');
+  }
+}
+
 function bindFxUI() {
   const b1 = document.getElementById('btnFxRefresh');
+  const bShare = document.getElementById('btnFxShare');
   const b2 = document.getElementById('btnFxGoArchivo');
   const b3 = document.getElementById('btnFxApiSave');
   const b4 = document.getElementById('btnFxApiTest');
   const b5 = document.getElementById('btnFxAdd');
   if (b1) b1.onclick = function () { fxFetchApi(false); };
+  if (bShare) bShare.onclick = function () { fxShareRates(); };
   if (b2) b2.onclick = function () {
     show('archivo');
     setTimeout(function () {
