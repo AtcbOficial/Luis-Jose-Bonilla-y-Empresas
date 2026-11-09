@@ -5419,11 +5419,15 @@ function viewProdDetail(id) {
       html += `<div class="d-row" style="font-size:11px;word-break:break-all"><strong>Link:</strong> <a href="${imgSrc}" target="_blank" rel="noopener" style="color:var(--accent)">abrir imagen</a></div>`;
     }
   }
-  html += `<div class="d-row"><strong>Nombre:</strong> ${escapeHtml(base)}</div>`;
-  if (p.codigo) html += `<div class="d-row"><strong>🪪 Código id:</strong> ${escapeHtml(p.codigo)}</div>`;
-  html += `<div class="d-row"><strong>Stock:</strong> ${p.stock ?? 0}</div>`;
-  html += `<div class="d-row"><strong>Fecha:</strong> ${fmtDate(p.fecha)} (${daysAgo(p.fecha)} d)</div>`;
-  if (p.obs) html += `<div class="d-row"><strong>Obs:</strong> ${escapeHtml(p.obs)}</div>`;
+  html += `<div class="d-row">🧴 <strong>Nombre:</strong> ${escapeHtml(base)}</div>`;
+  if (p.codigo) html += `<div class="d-row">🪪 <strong>Código id:</strong> ${escapeHtml(p.codigo)}</div>`;
+  if (p.familia || p.familiaOlfativa) html += `<div class="d-row">👃 <strong>Familia olfativa:</strong> ${escapeHtml(p.familia || p.familiaOlfativa)}</div>`;
+  html += `<div class="d-row">📦 <strong>Stock:</strong> ${p.stock ?? 0}</div>`;
+  html += `<div class="d-row">📅 <strong>Fecha:</strong> ${fmtDate(p.fecha)} (${daysAgo(p.fecha)} d)</div>`;
+  if (p.obs) {
+    html += `<div class="d-row" style="margin-top:8px">📝 <strong>Observaciones</strong></div>`;
+    html += `<div style="white-space:pre-wrap;line-height:1.5;margin:4px 0 10px;padding:10px;border-radius:10px;background:#0e151d;border:1px solid var(--border);font-size:13px">${escapeHtml(p.obs)}</div>`;
+  }
   if (keys.length) {
     html += `<div class="section-title" style="margin:12px 0 6px;font-size:13px">Capacidades</div>`;
     keys.forEach(k => {
@@ -5438,7 +5442,7 @@ function viewProdDetail(id) {
       </div>`;
     });
   } else {
-    html += `<div class="d-row"><strong>Compra:</strong> ${money(p.compra)} · <strong>Venta:</strong> ${money(p.venta)}</div>`;
+    html += `<div class="d-row">💰 <strong>Compra:</strong> ${money(p.compra)} · <strong>Venta:</strong> ${money(p.venta)}</div>`;
     if (p.lab) {
       const formula = formatLabFormula(p.lab);
       if (formula) html += `<div class="d-row">🔬 ${escapeHtml(formula)}</div>`;
@@ -5498,12 +5502,12 @@ function viewCliDetail(id) {
   if (!modal || !body) return;
   if (title) title.textContent = '👀 ' + (c.nombre || 'Cliente');
   let html = '';
-  html += `<div class="d-row"><strong>Nombre:</strong> ${escapeHtml(c.nombre || '')}</div>`;
-  html += `<div class="d-row"><strong>Documento / NIT:</strong> ${escapeHtml(c.documento || '—')}</div>`;
-  html += `<div class="d-row"><strong>Teléfono:</strong> ${escapeHtml(c.telefono || '—')}</div>`;
-  html += `<div class="d-row"><strong>Dirección:</strong> ${escapeHtml(c.direccion || '—')}</div>`;
-  html += `<div class="d-row"><strong>Email:</strong> ${escapeHtml(c.email || '—')}</div>`;
-  html += `<div class="d-row"><strong>Fecha:</strong> ${fmtDate(c.fecha)} (${daysAgo(c.fecha)} d)</div>`;
+  html += `<div class="d-row">👤 <strong>Nombre:</strong> ${escapeHtml(c.nombre || '')}</div>`;
+  html += `<div class="d-row">🪪 <strong>Documento / NIT:</strong> ${escapeHtml(c.documento || '—')}</div>`;
+  html += `<div class="d-row">📞 <strong>Teléfono:</strong> ${escapeHtml(c.telefono || '—')}</div>`;
+  html += `<div class="d-row">📍 <strong>Dirección:</strong> ${escapeHtml(c.direccion || '—')}</div>`;
+  html += `<div class="d-row">✉️ <strong>Email:</strong> ${escapeHtml(c.email || '—')}</div>`;
+  html += `<div class="d-row">📅 <strong>Fecha:</strong> ${fmtDate(c.fecha)} (${daysAgo(c.fecha)} d)</div>`;
   if (c.obs) html += `<div class="d-row">📝 <strong>Observaciones</strong><div style="white-space:pre-wrap;margin-top:6px;line-height:1.45">${escapeHtml(c.obs)}</div></div>`;
   const related = (invoices || []).filter(inv => {
     const n = (inv.cliente || '').toLowerCase().trim();
@@ -5632,7 +5636,7 @@ function viewProvDetail(id) {
   let web = (v.web || '').trim();
   if (web && !/^https?:\/\//i.test(web)) web = 'https://' + web;
   let html = '';
-  html += `<div class="d-row"><strong>Nombre:</strong> ${escapeHtml(v.nombre || '')}</div>`;
+  html += `<div class="d-row">🏭 <strong>Nombre:</strong> ${escapeHtml(v.nombre || '')}</div>`;
   html += `<div class="d-row"><strong>Documento / NIT:</strong> ${escapeHtml(v.documento || '—')}</div>`;
   html += `<div class="d-row"><strong>Teléfono:</strong> ${escapeHtml(v.telefono || '—')}</div>`;
   html += `<div class="d-row"><strong>Dirección:</strong> ${escapeHtml(v.direccion || '—')}</div>`;
@@ -7239,7 +7243,10 @@ function viewInvDetail(id) {
   } else if (inv.tipo === 'pendiente') {
     html += `<div class="d-row">Sin abonos · Saldo: ${money(saldo)}</div>`;
   }
-  if (inv.obs) html += `<div class="d-row" style="margin-top:6px"><strong>Obs:</strong> ${escapeHtml(inv.obs)}</div>`;
+  if (inv.obs) {
+    html += `<div class="d-row" style="margin-top:8px">📝 <strong>Observaciones</strong></div>`;
+    html += `<div style="white-space:pre-wrap;line-height:1.5;margin:4px 0 10px;padding:10px;border-radius:10px;background:#0e151d;border:1px solid var(--border);font-size:13px">${escapeHtml(inv.obs)}</div>`;
+  }
   if (isProy) {
     if (inv.tiempo) html += `<div class="d-row"><strong>Tiempo:</strong> ${escapeHtml(inv.tiempo)}</div>`;
     if (inv.validez) html += `<div class="d-row"><strong>Validez:</strong> ${escapeHtml(inv.validez)}</div>`;
@@ -10373,13 +10380,16 @@ function viewInsDetail(id) {
     html += `<div style="margin-bottom:10px;text-align:center"><img src="${imgSrc}" alt="" style="max-width:100%;max-height:200px;object-fit:contain;border-radius:10px;border:1px solid var(--border);background:#0e151d" onerror="this.style.display='none'"></div>`;
     html += `<div class="d-row" style="font-size:11px;word-break:break-all"><strong>Link:</strong> <a href="${imgSrc}" target="_blank" rel="noopener" style="color:var(--accent)">abrir imagen</a></div>`;
   }
-  html += `<div class="d-row"><strong>Nombre:</strong> ${escapeHtml(i.producto || '')}</div>`;
-  if (i.codigo) html += `<div class="d-row"><strong>🪪 Código id:</strong> ${escapeHtml(i.codigo)}</div>`;
-  html += `<div class="d-row"><strong>Categoría:</strong> ${escapeHtml(catLabel)}</div>`;
-  html += `<div class="d-row"><strong>Precio base:</strong> $ ${formatMoneyInput(i.precio)} / ${und}</div>`;
-  html += `<div class="d-row"><strong>Stock:</strong> ${i.stock ?? 0} ${und}</div>`;
+  html += `<div class="d-row">🧴 <strong>Nombre:</strong> ${escapeHtml(i.producto || '')}</div>`;
+  if (i.codigo) html += `<div class="d-row">🪪 <strong>Código id:</strong> ${escapeHtml(i.codigo)}</div>`;
+  html += `<div class="d-row">🏷️ <strong>Categoría:</strong> ${escapeHtml(catLabel)}</div>`;
+  html += `<div class="d-row">💰 <strong>Precio base:</strong> $ ${formatMoneyInput(i.precio)} / ${und}</div>`;
+  html += `<div class="d-row">📦 <strong>Stock:</strong> ${i.stock ?? 0} ${und}</div>`;
   if (i.familia || i.familiaOlfativa) html += `<div class="d-row">👃 <strong>Familia olfativa:</strong> ${escapeHtml(i.familia || i.familiaOlfativa)}</div>`;
-  if (i.obs) html += `<div class="d-row">📝 <strong>Observaciones</strong><div style="white-space:pre-wrap;margin-top:6px;line-height:1.45">${escapeHtml(i.obs)}</div></div>`;
+  if (i.obs) {
+    html += `<div class="d-row" style="margin-top:8px">📝 <strong>Observaciones</strong></div>`;
+    html += `<div style="white-space:pre-wrap;line-height:1.5;margin:4px 0 10px;padding:10px;border-radius:10px;background:#0e151d;border:1px solid var(--border);font-size:13px">${escapeHtml(i.obs)}</div>`;
+  }
   const provs = i.proveedores || [];
   if (provs.length) {
     html += `<div class="section-title" style="margin:12px 0 6px;font-size:13px">Proveedores</div>`;
