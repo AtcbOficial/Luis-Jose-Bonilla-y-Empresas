@@ -1005,6 +1005,74 @@ header #empresaSelect{
 #appTitle.catalog-link:active{opacity:.8}
 
 
+
+
+/* Fichas 👀: cabecera y controles fijos; solo se desplaza el contenido */
+#invDetailModal{
+  padding: max(8px, env(safe-area-inset-top, 0px)) 10px
+           max(8px, env(safe-area-inset-bottom, 0px));
+}
+#invDetailModal .detail-modal-box{
+  display:flex;
+  flex-direction:column;
+  width:100%;
+  max-width:560px;
+  height:min( min(88dvh, 900px), calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 16px) );
+  max-height:calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 16px);
+  min-height:0;
+  overflow:hidden;
+  padding:0;
+}
+#invDetailModal .detail-modal-head{
+  position:relative;
+  z-index:3;
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 12px;
+  background:linear-gradient(180deg,#1a2430 0%,#17212c 100%);
+  border-bottom:1px solid var(--emp-border);
+  box-shadow:0 4px 12px rgba(0,0,0,.28);
+}
+#invDetailModal .detail-modal-head h3{
+  flex:1;
+  min-width:0;
+  margin:0;
+  font-size:15px;
+  line-height:1.25;
+  overflow-wrap:anywhere;
+}
+#invDetailModal #invDetailActions{
+  flex:0 0 auto;
+  display:flex!important;
+  align-items:center;
+  justify-content:flex-end;
+  flex-wrap:nowrap;
+  gap:6px;
+  margin:0!important;
+}
+#invDetailModal #invDetailActions button{
+  min-width:34px;
+  min-height:32px;
+}
+#invDetailModal #invDetailBody{
+  flex:1 1 auto;
+  min-height:0;
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  padding:12px;
+  scrollbar-width:thin;
+}
+@media (max-width:380px){
+  #invDetailModal{padding-left:6px;padding-right:6px}
+  #invDetailModal .detail-modal-head{padding:9px}
+  #invDetailModal .detail-modal-head h3{font-size:13px}
+  #invDetailModal #invDetailActions{gap:4px}
+}
 </style>
 </head>
 <body class="auth-locked">
@@ -2279,11 +2347,13 @@ header #empresaSelect{
 
 <div id="invDetailModal" class="modal-overlay no-print">
   <div class="detail-modal-box">
-    <h3 id="invDetailTitle">Detalle</h3>
-    <div id="invDetailBody"></div>
-    <div class="modal-actions" id="invDetailActions" style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end">
-      <button type="button" class="sm danger" id="btnCloseInvDetail" title="Cerrar" onclick="closeInvDetail()">❌</button>
+    <div class="detail-modal-head">
+      <h3 id="invDetailTitle">Detalle</h3>
+      <div class="modal-actions" id="invDetailActions">
+        <button type="button" class="sm danger" id="btnCloseInvDetail" title="Cerrar" onclick="closeInvDetail()">❌</button>
+      </div>
     </div>
+    <div id="invDetailBody"></div>
   </div>
 </div>
 <div id="printArea"></div>
@@ -11377,27 +11447,50 @@ function fxShareRates() {
     ensureFx();
     const rates = (settings.fx && settings.fx.rates) || [];
     if (!rates.length) return toast('Sin tasas para compartir');
-    const lines = rates.map(function (r) {
-      return (r.emoji || '💱') + ' ' + (r.name || r.code || '') + ': ' + money(r.rate || 0);
+
+    const stamp = new Date().toLocaleString('es-CO', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
     });
-    const text = '💱 Tasa de cambios\\n' + lines.join('\\n') + '\\n\\n' + new Date().toLocaleString();
+    const separator = '━━━━━━━━━━━━━━━━━━';
+    const lines = rates.map(function (r) {
+      const label = String(r.name || r.code || 'Moneda').trim();
+      const code = String(r.code || '').trim();
+      const value = money(r.rate || 0);
+      return (r.emoji || '💱') + '  *' + label + (code && code.toLowerCase() !== label.toLowerCase() ? ' (' + code + ')' : '') + '*\n    ' + value;
+    });
+
+    const text = [
+      '💱 *TASAS DE CAMBIO*',
+      separator,
+      ...lines.flatMap(function (line) { return [line, '']; }),
+      separator,
+      '🕒 *Actualizado:* ' + stamp,
+      '',
+      '_Información de referencia._'
+    ].join('\n').trim();
+
     if (navigator.share) {
-      navigator.share({ title: 'Tasa de cambios', text: text }).catch(function () {
+      navigator.share({ title: 'Tasas de cambio', text: text }).catch(async function (err) {
+        if (err && err.name === 'AbortError') return;
         try {
-          navigator.clipboard.writeText(text);
-          toast('Tasas copiadas al portapapeles');
+          await navigator.clipboard.writeText(text);
+          toast('Mensaje copiado; puedes pegarlo en WhatsApp');
         } catch (e2) {
           window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
         }
       });
+      return;
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        toast('Mensaje copiado; puedes pegarlo en WhatsApp');
+      }).catch(function () {
+        window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+      });
     } else {
-      try {
-        navigator.clipboard.writeText(text);
-        toast('Tasas copiadas · también puedes enviar por WA');
-        window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
-      } catch (e3) {
-        window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
-      }
+      window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
     }
   } catch (e) {
     console.warn(e);
