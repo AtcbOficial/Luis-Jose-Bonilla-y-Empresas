@@ -1239,7 +1239,7 @@ header #empresaSelect{
         </div>
         <div class="form-row">
           <div class="search-wrap">
-            <input id="fCliente" placeholder="Nombre del cliente..." autocomplete="off">
+            <input id="fCliente" placeholder="🔍 Nombre del cliente..." autocomplete="off">
             <div id="cliDrop" class="dropdown"></div>
           </div>
         </div>
@@ -1344,7 +1344,7 @@ header #empresaSelect{
       </div>
       <div class="form-row">
         <div class="search-wrap">
-          <input id="pCliente" placeholder="Cliente..." autocomplete="off">
+          <input id="pCliente" placeholder="🔍 Nombre del cliente..." autocomplete="off">
           <div id="pCliDrop" class="dropdown"></div>
         </div>
       </div>
@@ -1656,7 +1656,7 @@ header #empresaSelect{
         </div>
       </div>
       <input id="pFamilia" placeholder="Familia olfativa (amaderado, cítrico, dulce…)" style="margin-bottom:6px" autocomplete="off">
-      <textarea id="pObs" placeholder="Observaciones (notas libres...)" style="margin-bottom:6px;min-height:56px"></textarea>
+      <textarea id="pObs" placeholder="Caracteristica del perfume" style="margin-bottom:6px;min-height:56px"></textarea>
       <div id="prodLabBox" style="display:none;margin:8px 0;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--card2)">
         <div class="section-title" style="font-size:13px;margin:0 0 8px">🔬 Fórmula laboratorio</div>
         <div class="grid2" style="margin-bottom:8px">
@@ -1732,7 +1732,7 @@ header #empresaSelect{
         <input id="insStock" type="number" min="0" step="0.01" placeholder="Stock">
       </div>
       <input id="insFamilia" placeholder="Familia olfativa (amaderado, cítrico, dulce…)" style="margin-bottom:6px" autocomplete="off">
-      <textarea id="insObs" placeholder="Observaciones (notas libres...)" style="margin-bottom:6px;min-height:56px"></textarea>
+      <textarea id="insObs" placeholder="Caracteristica del insumo" style="margin-bottom:6px;min-height:56px"></textarea>
       <div style="margin:8px 0;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--card2)">
         <div class="section-title" style="font-size:13px;margin:0 0 8px">🏭 Proveedores que lo ofrecen</div>
         <div id="insProvList"></div>
@@ -1810,7 +1810,7 @@ header #empresaSelect{
         </div>
         <div class="form-row" style="margin-bottom:10px">
           <input id="labFamilia" placeholder="Familia olfativa (amaderado, cítrico, dulce…)" style="margin-bottom:6px" autocomplete="off">
-          <textarea id="labObs" placeholder="Observaciones (notas libres...)" style="min-height:56px"></textarea>
+          <textarea id="labObs" placeholder=Caracteristica del perfume" style="min-height:56px"></textarea>
         </div>
         <div class="lab-cols">
           <div class="lab-col">
@@ -1850,7 +1850,7 @@ header #empresaSelect{
       </div>
       <div class="section-title" style="margin:0 0 12px">👥 Clientes <span id="cliCountBadge" class="cli-count-badge"></span></div>
       <div class="sticky-search">
-        <input id="cliSearch" placeholder="Filtrar nombre, doc o tel...">
+        <input id="cliSearch" placeholder="🔍 Filtrar nombre, doc o tel...">
       </div>
       <div id="cliList"></div>
     </div>
@@ -1881,7 +1881,7 @@ header #empresaSelect{
       </div>
       <div class="section-title" style="margin:0 0 12px">🏭 Proveedores <span id="provCountBadge" class="prov-count-badge"></span></div>
       <div class="sticky-search">
-        <input id="provSearch" placeholder="Filtrar nombre, doc o tel...">
+        <input id="provSearch" placeholder="🔍 Filtrar nombre, doc o tel...">
       </div>
       <div id="provList"></div>
     </div>
@@ -10697,7 +10697,7 @@ function renderLabQuim() {
     return `<div class="line-item" style="grid-template-columns:1fr">
       <div style="display:grid;grid-template-columns:minmax(0,1fr) 70px 78px;gap:6px;margin-bottom:4px;align-items:start">
         <div class="search-wrap">
-          <input value="${escapeHtml(l.prod || '')}" placeholder="Nombre químico..." autocomplete="off"
+          <input value="${escapeHtml(l.prod || '')}" placeholder="🔍 Nombre químico..." autocomplete="off"
             oninput="labQ[${i}].prod=this.value;labInsSearch(${i},'quimico',this.value)"
             onblur="setTimeout(()=>document.getElementById('labQDrop${i}')?.classList.remove('open'),200)">
           <div id="labQDrop${i}" class="dropdown"></div>
@@ -10724,7 +10724,7 @@ function renderLabImp() {
     return `<div class="line-item" style="grid-template-columns:1fr">
       <div style="display:grid;grid-template-columns:minmax(0,1fr) 70px 78px;gap:6px;margin-bottom:4px;align-items:start">
         <div class="search-wrap">
-          <input value="${escapeHtml(l.prod || '')}" placeholder="Nombre implemento..." autocomplete="off"
+          <input value="${escapeHtml(l.prod || '')}" placeholder="🔍 Nombre implemento..." autocomplete="off"
             oninput="labI[${i}].prod=this.value;labInsSearch(${i},'implemento',this.value)"
             onblur="setTimeout(()=>document.getElementById('labIDrop${i}')?.classList.remove('open'),200)">
           <div id="labIDrop${i}" class="dropdown"></div>
