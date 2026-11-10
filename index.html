@@ -1282,7 +1282,7 @@ header #empresaSelect{
         <div class="form-row">
           <div style="display:flex;gap:6px;align-items:flex-start">
             <div class="search-wrap" style="flex:1;min-width:0">
-              <input id="fProdSearch" placeholder="Buscar / código · pega: código;cant" autocomplete="off">
+              <input id="fProdSearch" placeholder="🔍 Buscar / código · pega: código;cant" autocomplete="off">
               
               <div id="prodDrop" class="dropdown"></div>
             </div>
@@ -1546,7 +1546,7 @@ header #empresaSelect{
         
         <div class="form-row">
           <div class="search-wrap" style="display:flex;gap:6px;align-items:stretch">
-            <input id="pResSearch" placeholder="Buscar / código o pega: codigo;cantidad" autocomplete="off" style="flex:1">
+            <input id="pResSearch" placeholder="🔍 Buscar / código o pega: codigo;cantidad" autocomplete="off" style="flex:1">
             <button type="button" id="btnScanQrProy" class="success" title="Escanear QR" style="flex-shrink:0;padding:8px 12px;white-space:nowrap">📷 QR</button>
             <div id="pResDrop" class="dropdown"></div>
           </div>
@@ -1591,7 +1591,7 @@ header #empresaSelect{
       <div class="section-title">📋 Facturas guardadas</div>
       <div class="sticky-search">
         <div class="actions">
-          <input id="factSearch" placeholder="Buscar cliente, nº, doc, tel...">
+          <input id="factSearch" placeholder="🔍 Buscar cliente, nº, doc, tel...">
           <select id="factFilter">
             <option value="todos">Todas</option>
             <option value="pendiente">En ejecución</option>
@@ -1681,7 +1681,7 @@ header #empresaSelect{
       <div class="section-title" style="margin:0 0 8px">📦 Stock de productos</div>
       <div class="sticky-search">
         <div class="actions">
-          <input id="stockSearch" placeholder="Buscar nombre, código o familia...">
+          <input id="stockSearch" placeholder="🔍 Buscar nombre, código o familia...">
           <select id="stockSort" title="Ordenar">
             <option value="name">Nombre A–Z</option>
             <option value="code">Código id ↑</option>
@@ -1754,7 +1754,7 @@ header #empresaSelect{
       <div class="section-title" style="margin:0 0 8px">🧪 Insumos / Implementos</div>
       <div class="sticky-search">
         <div class="actions" style="grid-template-columns:1fr auto auto;gap:6px">
-          <input id="insSearch" placeholder="Buscar nombre, código o familia...">
+          <input id="insSearch" placeholder="🔍 Buscar nombre, código o familia...">
           <select id="insFilterCat" title="Categoría" style="min-width:110px">
             <option value="">Todas</option>
             <option value="quimico">Químico (g)</option>
@@ -1970,7 +1970,7 @@ header #empresaSelect{
       <summary>📋 Libro diario</summary>
       <div class="body">
         <div class="actions" style="margin-bottom:10px;grid-template-columns:1fr 1fr 1fr">
-          <input id="contSearch" placeholder="F1 - F2 - P1 - PRESTAMO - INVERSION">
+          <input id="contSearch" placeholder="🔍 F1 - F2 - P1 - PRESTAMO - INVERSION">
           <select id="contFilter">
             <option value="Todos">Todos</option>
             <option value="Ingreso">Ingresos</option>
@@ -4538,7 +4538,7 @@ function renderProdLabQuim() {
     <div class="line-item" style="grid-template-columns:1fr">
       <div class="grid3" style="margin-bottom:4px">
         <div class="search-wrap">
-          <input value="${escapeHtml(l.prod || '')}" placeholder="Buscar químico..." autocomplete="off"
+          <input value="${escapeHtml(l.prod || '')}" placeholder="🔍 Buscar químico..." autocomplete="off"
             oninput="prodLabQ[${i}].prod=this.value;prodLabInsSearch(${i},'quimico',this.value)"
             onblur="setTimeout(()=>document.getElementById('pLabQDrop${i}')?.classList.remove('open'),200)">
           <div id="pLabQDrop${i}" class="dropdown"></div>
@@ -4558,7 +4558,7 @@ function renderProdLabImp() {
     <div class="line-item" style="grid-template-columns:1fr">
       <div class="grid3" style="margin-bottom:4px">
         <div class="search-wrap">
-          <input value="${escapeHtml(l.prod || '')}" placeholder="Buscar implemento..." autocomplete="off"
+          <input value="${escapeHtml(l.prod || '')}" placeholder="🔍 Buscar implemento..." autocomplete="off"
             oninput="prodLabI[${i}].prod=this.value;prodLabInsSearch(${i},'implemento',this.value)"
             onblur="setTimeout(()=>document.getElementById('pLabIDrop${i}')?.classList.remove('open'),200)">
           <div id="pLabIDrop${i}" class="dropdown"></div>
@@ -9975,7 +9975,7 @@ function contEmpLabel(x) {
 function contSearchText(x) {
   const base = String(x.concept || '');
   const emp = contEmpLabel(x);
-  // sinónimos para buscar por empresa
+  // sinónimos para 🔍 buscar por empresa
   const aliases = [];
   if (emp) {
     aliases.push(emp);
