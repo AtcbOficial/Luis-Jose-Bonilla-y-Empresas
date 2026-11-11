@@ -7698,51 +7698,53 @@ function buildPrintHtml(inv) {
   return `
   <div style="position:relative;max-width:800px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#111;font-size:12px;line-height:1.35">
     ${paidStampHtml(inv)}
-    ${banner ? `<div style="margin-bottom:6px"><img src="${banner}" alt="Banner" style="width:100%;max-height:150px;object-fit:contain;display:block"></div>` : ''}
-    <div style="display:flex;justify-content:flex-end;align-items:flex-start;gap:12px;margin-bottom:6px">
-      <div style="text-align:right;font-size:11px;line-height:1.4">
-        ${headerRight}
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <div style="flex:1;min-width:0">
+        ${banner ? `<img src="${banner}" alt="Banner" style="width:100%;max-height:150px;object-fit:contain;display:block">` : ''}
       </div>
       <div style="flex-shrink:0;text-align:center">
         <img src="${qrImg}" alt="QR ${escapeHtml(String(numDisplay))}" style="width:64px;height:64px;border:1px solid #ccc;display:block"/>
         <div style="font-size:9px;font-weight:700;margin-top:2px">${escapeHtml(String(numDisplay))}</div>
       </div>
     </div>
-    <div style="font-size:10px;margin-bottom:14px">${escapeHtml(e.note || '')}</div>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:12px;font-size:12px">
+    <div style="text-align:right;font-size:11px;line-height:1.3;margin-bottom:2px">
+      ${headerRight}
+    </div>
+    <div style="font-size:10px;margin-bottom:6px;line-height:1.3">${escapeHtml(e.note || '')}</div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:6px;font-size:12px">
       <tr>
         <td style="width:55%;vertical-align:top;padding:0 8px 0 0">
           <div><strong>Nombre y Apellido</strong> &nbsp;.&nbsp; ${escapeHtml(inv.cliente || '')}</div>
-          <div style="margin-top:4px"><strong>Documento CIF - NIF</strong> &nbsp;.&nbsp; ${escapeHtml(inv.documento || '')}</div>
-          <div style="margin-top:4px"><strong>Dirección de habitad</strong> &nbsp;.&nbsp; ${escapeHtml(inv.direccion || '')}</div>
+          <div style="margin-top:2px"><strong>Documento CIF - NIF</strong> &nbsp;.&nbsp; ${escapeHtml(inv.documento || '')}</div>
+          <div style="margin-top:2px"><strong>Dirección de habitad</strong> &nbsp;.&nbsp; ${escapeHtml(inv.direccion || '')}</div>
         </td>
         <td style="width:45%;vertical-align:top;padding:0;text-align:right">
           <div><strong>Fecha</strong> &nbsp;&nbsp; ${fmtDate(fechaFmt)}</div>
-          <div style="margin-top:4px"><strong>Factura natural N°</strong> &nbsp;&nbsp; ${escapeHtml(String(numDisplay))}</div>
-          <div style="margin-top:4px"><strong>Tel. Adm.</strong> &nbsp;&nbsp; ${escapeHtml(e.tel || '')}</div>
+          <div style="margin-top:2px"><strong>Factura natural N°</strong> &nbsp;&nbsp; ${escapeHtml(String(numDisplay))}</div>
+          <div style="margin-top:2px"><strong>Tel. Adm.</strong> &nbsp;&nbsp; ${escapeHtml(e.tel || '')}</div>
         </td>
       </tr>
     </table>
     <table style="width:100%;border-collapse:collapse;border:1px solid #333;font-size:11px">
       <thead>
         <tr>
-          <th style="border:1px solid #333;padding:8px;width:42%;background:#f7f7f7;text-align:center">Observaciones</th>
-          <th style="border:1px solid #333;padding:8px;width:58%;background:#f7f7f7;text-align:center">Productos e implementos</th>
+          <th style="border:1px solid #333;padding:6px;width:42%;background:#f7f7f7;text-align:center">Observaciones</th>
+          <th style="border:1px solid #333;padding:6px;width:58%;background:#f7f7f7;text-align:center">Productos e implementos</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td style="border:1px solid #333;padding:10px 8px;vertical-align:top;height:260px">${obsHtml}</td>
-          <td style="border:1px solid #333;padding:10px 8px;vertical-align:top;font-family:monospace,Consolas,monospace;font-size:11px">${productosHtml}</td>
+          <td style="border:1px solid #333;padding:8px;vertical-align:top;min-height:120px">${obsHtml}</td>
+          <td style="border:1px solid #333;padding:8px;vertical-align:top;font-family:monospace,Consolas,monospace;font-size:11px">${productosHtml}</td>
         </tr>
       </tbody>
     </table>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding:0 4px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding:0 4px">
       <div style="font-size:16px;font-weight:800">TOTAL A CANCELAR</div>
       <div style="font-size:18px;font-weight:800">${money(inv.total)}</div>
     </div>
     ${abonosPdf}
-    <div style="margin-top:16px;font-size:${(e.pdfFontSize || 10)}px;text-transform:uppercase;line-height:1.4">
+    <div style="margin-top:8px;font-size:${(e.pdfFontSize || 10)}px;text-transform:uppercase;line-height:1.35">
       ${escapeHtml((e.pdfNota && String(e.pdfNota).trim()) || ((inv.empresa === EMPRESA_PERFUMES)
         ? 'PRODUCTOS DE PERFUMERÍA · VERIFIQUE EL CONTENIDO AL RECIBIR'
         : 'REPUESTOS ELECTRICO-MECANICOS NO POSEE GARANTIA, APLICA SOLO EN SOLDADURA Y MONTAJE, AJENO A LO QUE NO SE MANIPULO EN EL EQUIPO')).replace(/\n/g,'<br>')}
