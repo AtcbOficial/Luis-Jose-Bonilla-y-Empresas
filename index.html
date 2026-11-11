@@ -7698,18 +7698,14 @@ function buildPrintHtml(inv) {
   return `
   <div style="position:relative;max-width:800px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#111;font-size:12px;line-height:1.35">
     ${paidStampHtml(inv)}
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-      <div style="flex:1;min-width:0">
-        <img src="${banner}" alt="Banner" style="width:100%;max-height:88px;object-fit:contain;display:block">
+    ${banner ? `<div style="margin-bottom:6px"><img src="${banner}" alt="Banner" style="width:100%;max-height:150px;object-fit:contain;display:block"></div>` : ''}
+    <div style="display:flex;justify-content:flex-end;align-items:flex-start;gap:12px;margin-bottom:6px">
+      <div style="text-align:right;font-size:11px;line-height:1.4">
+        ${headerRight}
       </div>
       <div style="flex-shrink:0;text-align:center">
         <img src="${qrImg}" alt="QR ${escapeHtml(String(numDisplay))}" style="width:64px;height:64px;border:1px solid #ccc;display:block"/>
         <div style="font-size:9px;font-weight:700;margin-top:2px">${escapeHtml(String(numDisplay))}</div>
-      </div>
-    </div>
-    <div style="display:flex;justify-content:flex-end;margin-bottom:6px">
-      <div style="text-align:right;font-size:11px;line-height:1.4">
-        ${headerRight}
       </div>
     </div>
     <div style="font-size:10px;margin-bottom:14px">${escapeHtml(e.note || '')}</div>
@@ -9437,7 +9433,7 @@ function proyHeaderHtml(numDisplay, hoja, totalHojas) {
   const qrImg = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=4&data=' + encodeURIComponent(String(numDisplay));
   return `
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-    <div style="flex:1;min-width:0">${banner ? `<img src="${banner}" alt="Banner" style="width:100%;max-height:80px;object-fit:contain;display:block">` : ''}</div>
+    <div style="flex:1;min-width:0">${banner ? `<img src="${banner}" alt="Banner" style="width:100%;max-height:140px;object-fit:contain;display:block">` : ''}</div>
     <div style="flex-shrink:0;text-align:center">
       <img src="${qrImg}" alt="QR" style="width:56px;height:56px;border:1px solid #ccc;display:block"/>
       <div style="font-size:8px;font-weight:700;margin-top:2px">${escapeHtml(String(numDisplay))}</div>
