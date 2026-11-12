@@ -1262,7 +1262,7 @@ header #empresaSelect{
           <div class="total-box fact-total-box">
             <div class="fact-total-row">
               <div>
-                <div class="label">TOTAL A CANCELAR</div>
+                <div class="label">${escapeHtml(pl.Total)}</div>
                 <div class="big" id="fTotal">$0</div>
               </div>
               <div class="fact-total-side">
@@ -2213,6 +2213,14 @@ header #empresaSelect{
           <button type="button" id="btnRestoreBanner" class="print">Restaurar original</button>
           <button class="success" type="button" id="btnSaveBanner">💾 Guardar banner</button>
         </div>
+        <label class="label">Textos editables del PDF (etiquetas)</label>
+        <div class="grid2" style="gap:6px;margin-bottom:8px">
+          <input id="pdfLblClient" placeholder="Etiqueta cliente"><input id="pdfLblDoc" placeholder="Etiqueta documento">
+          <input id="pdfLblAddress" placeholder="Etiqueta dirección"><input id="pdfLblDate" placeholder="Etiqueta fecha">
+          <input id="pdfLblNumber" placeholder="Etiqueta número"><input id="pdfLblPhone" placeholder="Etiqueta teléfono">
+          <input id="pdfLblObs" placeholder="Título observaciones"><input id="pdfLblProducts" placeholder="Título productos">
+          <input id="pdfLblTotal" placeholder="Título total">
+        </div>
         <label class="label">Nota legal / pie del PDF</label>
         <textarea id="setPdfNota" rows="3" placeholder="Nota al pie del PDF" style="margin-bottom:8px"></textarea>
         <label class="label">Tamaño fuente base PDF (px)</label>
@@ -2225,6 +2233,20 @@ header #empresaSelect{
       <summary>🧾 Impresora térmica</summary>
       <div class="body">
         <p class="sub">Por empresa activa: textos y tamaños del ticket Phomemo (BLE/USB).</p>
+        <label class="label">Nombre/título superior del ticket (vacío = nombre de empresa)</label>
+        <input id="setThermalTitle" placeholder="Nombre que aparecerá arriba" style="margin-bottom:8px">
+        <label class="label">Líneas adicionales de encabezado (una por línea)</label>
+        <textarea id="setThermalHeaderLines" rows="3" placeholder="Dirección, redes, correo..." style="margin-bottom:8px"></textarea>
+        <label class="label">Datos de pago (una línea por dato)</label>
+        <textarea id="setThermalPaymentLines" rows="5" placeholder="Banco&#10;Cuenta&#10;Titular&#10;Documento" style="margin-bottom:8px"></textarea>
+        <label class="label">Etiquetas del ticket</label>
+        <div class="grid2" style="gap:6px;margin-bottom:8px">
+          <input id="thLblClient" placeholder="Título cliente"><input id="thLblProducts" placeholder="Título productos">
+          <input id="thLblTotal" placeholder="Título total"><input id="thLblObs" placeholder="Título observaciones">
+          <input id="thLblPayment" placeholder="Título medio de pago">
+        </div>
+        <label class="label">Mensaje final del ticket</label>
+        <input id="setThermalThanks" placeholder="Gracias por su compra" style="margin-bottom:8px">
         <label class="label">Nota legal del ticket</label>
         <textarea id="setThermalNota" rows="3" placeholder="Nota legal térmica" style="margin-bottom:8px"></textarea>
         <label class="label">Escala de fuente (1 = normal · 1.2 = más grande)</label>
@@ -2959,6 +2981,7 @@ function defaultEmpresaAtcb() {
     proyDescCondensadora: DEFAULT_PROY_DESC.condensadora,
     proyDescAccesorios: DEFAULT_PROY_DESC.accesorios,
     proyDescTablero: DEFAULT_PROY_DESC.tablero,
+    thermalTitle: '', thermalHeaderLines: '', thermalPaymentLines: 'Bancolombia\nLlave BRE-B @bonilla8395\nAhorros 86900003930\nLuis Bonilla P. J.\nPasaporte 5001998395', thermalThanks: 'Gracias por su compra', thermalLabels: {}, pdfLabels: {},
     thermalNota: 'REPUESTOS ELECTRICO-MECANICOS NO POSEE GARANTIA, APLICA SOLO EN SOLDADURA Y MONTAJE, AJENO A LO QUE NO SE MANIPULO EN EL EQUIPO',
     thermalFontScale: 1.1,
     thermalSizeCod: 28,
@@ -2979,6 +3002,7 @@ function defaultEmpresaPerfumes() {
     waMotivar: DEFAULT_WA_MOTIVAR, waProy: DEFAULT_WA_PROY,
     proyAplicacion: '', pdfBanner: DEFAULT_PDF_BANNER, thermalBanner: '',
     proyTiempo: '', proyValidez: '', proyFormaPago: '', proyGarantia: '', proyNota: '', proyIntro: '', proyTitulo: '',
+    thermalTitle: '', thermalHeaderLines: '', thermalPaymentLines: 'Bancolombia\nLlave BRE-B @bonilla8395\nAhorros 86900003930\nLuis Bonilla P. J.\nPasaporte 5001998395', thermalThanks: 'Gracias por su compra', thermalLabels: {}, pdfLabels: {},
     thermalNota: 'PRODUCTOS DE PERFUMERÍA · VERIFIQUE EL CONTENIDO AL RECIBIR, NO NOS HACEMOS RESPONSABLE DESPUES DE RECIBIDO',
     thermalFontScale: 1.1,
     thermalSizeCod: 28,
@@ -3001,7 +3025,7 @@ function empCfg(empId) {
   let e = (settings.empresas && settings.empresas[id]) || null;
   if (!e) e = (settings.empresas && settings.empresas.atcb) || defaultEmpresaAtcb();
   const base = (id === 'perfumes' || id === EMPRESA_PERFUMES) ? defaultEmpresaPerfumes() : defaultEmpresaAtcb();
-  ['thermalNota','thermalFontScale','thermalSizeCod','thermalSizeBody','thermalSizeTotal','pdfNota','pdfFontSize','label','tagline','catalogUrl'].forEach(function (k) {
+  ['thermalNota','thermalTitle','thermalHeaderLines','thermalPaymentLines','thermalThanks','thermalLabels','pdfLabels','thermalFontScale','thermalSizeCod','thermalSizeBody','thermalSizeTotal','pdfNota','pdfFontSize','label','tagline','catalogUrl'].forEach(function (k) {
     if (e[k] == null || e[k] === '') e[k] = base[k];
   });
   return e;
@@ -3010,7 +3034,7 @@ function syncFlatSettingsFromEmp() {
   const e = empCfg();
   ['name','nit','tel','social','note','email','dir','banks','waFact','waCxc','waMotivar','waProy',
    'proyAplicacion','pdfBanner','thermalBanner','proyTiempo','proyValidez','proyFormaPago','proyGarantia','proyNota','proyIntro','proyTitulo',
-   'thermalNota','thermalFontScale','thermalSizeCod','thermalSizeBody','thermalSizeTotal','pdfNota','pdfFontSize'
+   'thermalNota','thermalTitle','thermalHeaderLines','thermalPaymentLines','thermalThanks','thermalLabels','pdfLabels','thermalFontScale','thermalSizeCod','thermalSizeBody','thermalSizeTotal','pdfNota','pdfFontSize'
   ].forEach(k => { settings[k] = e[k]; });
 }
 
@@ -3461,6 +3485,11 @@ function syncSettingsUI() {
   const banHint = document.getElementById('pdfBannerEmpHint');
   if (banHint) banHint.textContent = 'Empresa: ' + (e.label || activeEmpresa) + ' — cada empresa tiene su propio encabezado.';
   const spn = document.getElementById('setPdfNota'); if (spn) spn.value = e.pdfNota || '';
+  const pdfDefaults = {Client:'Nombre y Apellido',Doc:'Documento CIF - NIF',Address:'Dirección de habitad',Date:'Fecha',Number:'Factura natural N°',Phone:'Tel. Adm.',Obs:'Observaciones',Products:'Productos e implementos',Total:'TOTAL A CANCELAR'};
+  Object.keys(pdfDefaults).forEach(k => { const el=document.getElementById('pdfLbl'+k); if(el) el.value=(e.pdfLabels||{})[k] || pdfDefaults[k]; });
+  [['setThermalTitle','thermalTitle'],['setThermalHeaderLines','thermalHeaderLines'],['setThermalPaymentLines','thermalPaymentLines'],['setThermalThanks','thermalThanks']].forEach(([id,k])=>{const el=document.getElementById(id);if(el)el.value=e[k]||'';});
+  const thDefaults = {Client:'CLIENTE',Products:'PRODUCTOS',Total:'TOTAL',Obs:'OBS.',Payment:'MEDIO DE PAGO'};
+  Object.keys(thDefaults).forEach(k=>{const el=document.getElementById('thLbl'+k);if(el)el.value=(e.thermalLabels||{})[k]||thDefaults[k];});
   const spf = document.getElementById('setPdfFontSize'); if (spf) spf.value = e.pdfFontSize || 10;
   const stn = document.getElementById('setThermalNota'); if (stn) stn.value = e.thermalNota || '';
   const sts = document.getElementById('setThermalFontScale'); if (sts) sts.value = e.thermalFontScale || 1.1;
@@ -3792,7 +3821,10 @@ function loadFromObj(obj) {
   contCajas = {
     electronica: +(ct.cajas && ct.cajas.electronica) || 0,
     fisica: +(ct.cajas && ct.cajas.fisica) || 0,
-    inversiones: +(ct.cajas && ct.cajas.inversiones) || 0
+    inversiones: +(ct.cajas && ct.cajas.inversiones) || 0,
+    lastElectronica: (ct.cajas && ct.cajas.lastElectronica) || '',
+    lastFisica: (ct.cajas && ct.cajas.lastFisica) || '',
+    lastInversiones: (ct.cajas && ct.cajas.lastInversiones) || ''
   };
   contMovimientos = (ct.movimientos || []).map((x, i) => ({
     id: x.id != null ? +x.id : (i + 1),
@@ -7692,6 +7724,7 @@ function buildPrintHtml(inv) {
   const numDisplay = invNumeroDisplay(inv);
   const qrImg = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&margin=4&data=' + encodeURIComponent(numDisplay);
   const banner = e.pdfBanner || DEFAULT_PDF_BANNER;
+  const pl = Object.assign({Client:'Nombre y Apellido',Doc:'Documento CIF - NIF',Address:'Dirección de habitad',Date:'Fecha',Number:'Factura natural N°',Phone:'Tel. Adm.',Obs:'Observaciones',Products:'Productos e implementos',Total:'TOTAL A CANCELAR'}, e.pdfLabels || {});
   const hasAbonos = (inv.abonos || []).length > 0;
   const abonado = totalAbonado(inv);
   const saldo = saldoPendiente(inv);
@@ -7729,22 +7762,22 @@ function buildPrintHtml(inv) {
     <table style="width:100%;border-collapse:collapse;margin-bottom:6px;font-size:12px">
       <tr>
         <td style="width:55%;vertical-align:top;padding:0 8px 0 0">
-          <div><strong>Nombre y Apellido</strong> &nbsp;.&nbsp; ${escapeHtml(inv.cliente || '')}</div>
-          <div style="margin-top:2px"><strong>Documento CIF - NIF</strong> &nbsp;.&nbsp; ${escapeHtml(inv.documento || '')}</div>
-          <div style="margin-top:2px"><strong>Dirección de habitad</strong> &nbsp;.&nbsp; ${escapeHtml(inv.direccion || '')}</div>
+          <div><strong>${escapeHtml(pl.Client)}</strong> &nbsp;.&nbsp; ${escapeHtml(inv.cliente || '')}</div>
+          <div style="margin-top:2px"><strong>${escapeHtml(pl.Doc)}</strong> &nbsp;.&nbsp; ${escapeHtml(inv.documento || '')}</div>
+          <div style="margin-top:2px"><strong>${escapeHtml(pl.Address)}</strong> &nbsp;.&nbsp; ${escapeHtml(inv.direccion || '')}</div>
         </td>
         <td style="width:45%;vertical-align:top;padding:0;text-align:right">
-          <div><strong>Fecha</strong> &nbsp;&nbsp; ${fmtDate(fechaFmt)}</div>
-          <div style="margin-top:2px"><strong>Factura natural N°</strong> &nbsp;&nbsp; ${escapeHtml(String(numDisplay))}</div>
-          <div style="margin-top:2px"><strong>Tel. Adm.</strong> &nbsp;&nbsp; ${escapeHtml(e.tel || '')}</div>
+          <div><strong>${escapeHtml(pl.Date)}</strong> &nbsp;&nbsp; ${fmtDate(fechaFmt)}</div>
+          <div style="margin-top:2px"><strong>${escapeHtml(pl.Number)}</strong> &nbsp;&nbsp; ${escapeHtml(String(numDisplay))}</div>
+          <div style="margin-top:2px"><strong>${escapeHtml(pl.Phone)}</strong> &nbsp;&nbsp; ${escapeHtml(e.tel || '')}</div>
         </td>
       </tr>
     </table>
     <table style="width:100%;border-collapse:collapse;border:1px solid #333;font-size:11px">
       <thead>
         <tr>
-          <th style="border:1px solid #333;padding:6px;width:42%;background:#f7f7f7;text-align:center">Observaciones</th>
-          <th style="border:1px solid #333;padding:6px;width:58%;background:#f7f7f7;text-align:center">Productos e implementos</th>
+          <th style="border:1px solid #333;padding:6px;width:42%;background:#f7f7f7;text-align:center">${escapeHtml(pl.Obs)}</th>
+          <th style="border:1px solid #333;padding:6px;width:58%;background:#f7f7f7;text-align:center">${escapeHtml(pl.Products)}</th>
         </tr>
       </thead>
       <tbody>
@@ -7755,7 +7788,7 @@ function buildPrintHtml(inv) {
       </tbody>
     </table>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding:0 4px">
-      <div style="font-size:16px;font-weight:800">TOTAL A CANCELAR</div>
+      <div style="font-size:16px;font-weight:800">${escapeHtml(pl.Total)}</div>
       <div style="font-size:18px;font-weight:800">${money(inv.total)}</div>
     </div>
     ${abonosPdf}
@@ -7822,8 +7855,9 @@ function buildThermalHtml(inv) {
       ? 'PRODUCTOS DE PERFUMERÍA · VERIFIQUE EL CONTENIDO AL RECIBIR, NO NOS HACEMOS RESPONSABLE DESPUES DE RECIBIDO'
       : 'REPUESTOS ELECTRICO-MECANICOS NO POSEE GARANTIA, APLICA SOLO EN SOLDADURA Y MONTAJE, AJENO A LO QUE NO SE MANIPULO EN EL EQUIPO');
 
+  const thl = Object.assign({Client:'CLIENTE',Products:'PRODUCTOS / SERVICIOS',Total:'TOTAL',Obs:'Obs.',Payment:'Medio de pago'},e.thermalLabels||{});
   const obs = inv.obs ? String(inv.obs) : '';
-  const obsHtml = obs ? ('<div class="line"></div><div class="sec">Obs.</div><div class="small">' + escapeHtml(obs).replace(/\n/g, '<br>') + '</div>') : '';
+  const obsHtml = obs ? ('<div class="line"></div><div class="sec">' + escapeHtml(thl.Obs) + '</div><div class="small">' + escapeHtml(obs).replace(/\n/g, '<br>') + '</div>') : '';
   const bannerHtml = banner ? ('<img class="banner" src="' + escapeHtml(banner) + '" alt="">') : '';
 
   return [
@@ -7848,31 +7882,30 @@ function buildThermalHtml(inv) {
     '<div class="center">' + bannerHtml +
     '<img class="qr" src="' + qrImg + '" alt="QR">' +
     '<div class="cod">' + escapeHtml(cod) + '</div></div>',
-    '<div class="small center"><strong>' + escapeHtml(e.name || e.label || '') + '</strong><br>',
+    '<div class="small center"><strong>' + escapeHtml(e.thermalTitle || e.name || e.label || '') + '</strong><br>',
+    String(e.thermalHeaderLines || '').split(/\\n/).filter(Boolean).map(x => escapeHtml(x)).join('<br>') + (e.thermalHeaderLines ? '<br>' : ''),
     (e.nit ? ('NIT ' + escapeHtml(e.nit) + '<br>') : ''),
     (e.tel ? ('Tel. ' + escapeHtml(e.tel) + '<br>') : ''),
     (e.social ? (escapeHtml(e.social) + '<br>') : ''),
     (e.dir ? escapeHtml(e.dir) : ''),
     '</div><div class="line"></div>',
-    '<div class="sec">Cliente</div><div class="small">',
+    '<div class="sec">' + escapeHtml(thl.Client) + '</div><div class="small">',
     escapeHtml(inv.cliente || '') + '<br>',
     (inv.documento ? ('Doc: ' + escapeHtml(inv.documento) + '<br>') : ''),
     (inv.telefono ? ('Tel: ' + escapeHtml(inv.telefono) + '<br>') : ''),
     (inv.direccion ? (escapeHtml(inv.direccion) + '<br>') : ''),
     'Fecha: ' + fmtDate(inv.fecha),
     '</div><div class="line"></div>',
-    '<div class="sec">Productos / servicios</div>',
+    '<div class="sec">' + escapeHtml(thl.Products) + '</div>',
     items || '<div class="small">Sin items</div>',
     '<div class="line"></div>',
-    '<div class="row total"><span class="ti">TOTAL</span><span class="tr">' + money(inv.total) + '</span></div>',
+    '<div class="row total"><span class="ti">' + escapeHtml(thl.Total) + '</span><span class="tr">' + money(inv.total) + '</span></div>',
     abonosHtml ? ('<div class="line"></div>' + abonosHtml) : '',
     obsHtml,
     '<div class="line"></div><div class="small">' + escapeHtml(nota) + '</div>',
-    '<div class="line"></div><div class="sec">Medio de pago</div>',
-    '<div class="pay">Bancolombia<br>Llave BRE-B <strong>@bonilla8395</strong><br>',
-    'Cuenta de ahorros<br>Nro. <strong>86900003930</strong><br>',
-    'Sr. Luis Bonilla P. J.<br>Pasaporte: 5001998395</div>',
-    '<div class="line"></div><div class="center small" style="margin-top:8px">Gracias por su compra</div>',
+    (String(e.thermalPaymentLines == null ? 'Bancolombia\\nLlave BRE-B @bonilla8395\\nCuenta de ahorros\\nNro. 86900003930\\nSr. Luis Bonilla P. J.\\nPasaporte: 5001998395' : e.thermalPaymentLines).trim()
+      ? '<div class="line"></div><div class="sec">' + escapeHtml(thl.Payment) + '</div><div class="pay">' + String(e.thermalPaymentLines == null ? 'Bancolombia\\nLlave BRE-B @bonilla8395\\nCuenta de ahorros\\nNro. 86900003930\\nSr. Luis Bonilla P. J.\\nPasaporte: 5001998395' : e.thermalPaymentLines).split(/\\n/).filter(Boolean).map(x => escapeHtml(x)).join('<br>') + '</div>' : ''),
+    '<div class="line"></div><div class="center small" style="margin-top:8px">' + escapeHtml(e.thermalThanks || 'Gracias por su compra') + '</div>',
     '</body></html>'
   ].join('');
 }
@@ -8191,19 +8224,21 @@ async function thermalRenderCanvas(inv) {
   function add(t, o) {
     lines.push(Object.assign({ t: String(t == null ? '' : t), size: szBody, bold: false, center: false, right: false }, o || {}));
   }
-  add(e.name || e.label || 'Empresa', { size: Math.round(szCod * 0.95), bold: true, center: true });
+  add(e.thermalTitle || e.name || e.label || 'Empresa', { size: Math.round(szCod * 0.95), bold: true, center: true });
+  String(e.thermalHeaderLines || '').split(/\n/).forEach(l => { if (l.trim()) add(l.trim(), {center:true,size:szSmall}); });
   if (e.nit) add('NIT ' + e.nit, { size: szBody, center: true });
   if (e.tel) add('Tel. ' + e.tel, { size: szBody, center: true });
   add('--------------------------------', { center: true, size: szSmall });
   add(String(cod), { size: szCod, bold: true, center: true });
   add('--------------------------------', { center: true, size: szSmall });
-  add('CLIENTE', { size: szSec, bold: true });
+  const thl = Object.assign({Client:'CLIENTE',Products:'PRODUCTOS',Total:'TOTAL',Obs:'OBS.',Payment:'MEDIO DE PAGO'},e.thermalLabels||{});
+  add(thl.Client, { size: szSec, bold: true });
   add(inv.cliente || '-', { size: Math.round(szBody * 1.15) });
   if (inv.documento) add('Doc: ' + inv.documento, { size: szBody });
   if (inv.telefono) add('Tel: ' + inv.telefono, { size: szBody });
   add('Fecha: ' + fmtDate(inv.fecha), { size: szBody });
   add('--------------------------------', { center: true, size: szSmall });
-  add('PRODUCTOS', { size: szSec, bold: true });
+  add(thl.Products, { size: szSec, bold: true });
   (inv.items || []).forEach(function (it) {
     const cant = it.cant || 0;
     const name = it.name || '';
@@ -8211,7 +8246,7 @@ async function thermalRenderCanvas(inv) {
   });
   if (!(inv.items || []).length) add('(sin items)', { size: szBody });
   add('--------------------------------', { center: true, size: szSmall });
-  add('TOTAL  ' + money(inv.total), { size: szTotal, bold: true });
+  add(thl.Total + '  ' + money(inv.total), { size: szTotal, bold: true });
   if ((inv.abonos || []).length) {
     add('ABONOS', { size: 20, bold: true });
     inv.abonos.forEach(function (a) {
@@ -8221,7 +8256,7 @@ async function thermalRenderCanvas(inv) {
     add('Saldo ' + money(saldoPendiente(inv)), { size: 18, bold: true });
   }
   if (inv.obs) {
-    add('OBS.', { size: 20, bold: true });
+    add(thl.Obs, { size: 20, bold: true });
     String(inv.obs).split(/\n/).forEach(function (l) { if (l) add(l, { size: 17 }); });
   }
   add('--------------------------------', { center: true, size: szSmall });
@@ -8232,13 +8267,12 @@ async function thermalRenderCanvas(inv) {
       : 'REPUESTOS ELECTRICO-MECANICOS NO POSEE GARANTIA, APLICA SOLO EN SOLDADURA Y MONTAJE.');
   String(notaT).split(/\n/).forEach(function (l) { if (String(l).trim()) add(String(l).trim(), { size: Math.max(12, Math.round(szBody * 0.85)) }); });
   add('--------------------------------', { center: true, size: szSmall });
-  add('MEDIO DE PAGO', { size: szSec, bold: true });
-  add('Bancolombia', { size: 18 });
-  add('Llave BRE-B @bonilla8395', { size: 18, bold: true });
-  add('Ahorros 86900003930', { size: 18 });
-  add('Luis Bonilla P. J.', { size: 17 });
-  add('Pasaporte 5001998395', { size: 16 });
-  add('Gracias por su compra', { size: 20, center: true, bold: true });
+  const paymentLines = String(e.thermalPaymentLines == null ? 'Bancolombia\nLlave BRE-B @bonilla8395\nAhorros 86900003930\nLuis Bonilla P. J.\nPasaporte 5001998395' : e.thermalPaymentLines).split(/\n/).filter(x => x.trim());
+  if (paymentLines.length) {
+    add(thl.Payment, { size: szSec, bold: true });
+    paymentLines.forEach((line, idx) => add(line.trim(), {size:szBody,bold:idx===1}));
+  }
+  if (e.thermalThanks !== '') add(e.thermalThanks || 'Gracias por su compra', { size: 20, center: true, bold: true });
 
   const measure = document.createElement('canvas').getContext('2d');
   let needH = pad + 8;
@@ -8359,16 +8393,8 @@ async function thermalBlePrint() {
     const data = raster.data;
     const widthBytes = raster.widthBytes;
     const heightLines = raster.heightLines;
-    console.log('[thermal] print', {
-      invoice: inv.numero || inv.id,
-      widthBytes: widthBytes,
-      heightLines: heightLines,
-      rasterBytes: data.length
-    });
+    console.log('[thermal] print', widthBytes, heightLines, data.length);
     if (heightLines < 8) throw new Error('Ticket demasiado corto');
-    // GS v 0 utiliza altura de 16 bits. No imponer un límite de 255 líneas:
-    // M110 admite la altura completa en un único encabezado raster.
-    if (heightLines > 65535) throw new Error('El ticket supera la altura raster admitida (65.535 líneas).');
 
     // Contar bits negros (si 0 → imagen blanca)
     let blackBits = 0;
@@ -8399,32 +8425,23 @@ async function thermalBlePrint() {
       heightLines & 0xff, (heightLines >> 8) & 0xff
     ]));
 
-    // Mantener paquetes BLE pequeños y aumentar la pausa en tickets grandes.
-    // El 100% representa datos escritos por el navegador, no confirmación física.
     const chunkSize = 128;
-    const chunkDelay = data.length > 60000 ? 50 : (data.length > 25000 ? 40 : 30);
-    const totalChunks = Math.ceil(data.length / chunkSize);
-    let sentChunks = 0;
     for (let i = 0; i < data.length; i += chunkSize) {
       const end = Math.min(i + chunkSize, data.length);
-      // Copia independiente para evitar reutilización del buffer BLE.
+      // Copia del slice (evita problemas de buffer compartido)
       const chunk = data.slice(i, end);
       await thermalBleSend(chunk);
-      sentChunks++;
-      await thermalDelay(chunkDelay);
-      if (sentChunks === 1 || sentChunks % 10 === 0 || sentChunks === totalChunks) {
-        const pct = Math.min(99, Math.round(sentChunks / totalChunks * 100));
-        setThermalStatus('Enviando datos… ' + pct + '% (' + sentChunks + '/' + totalChunks + ')');
+      await thermalDelay(25);
+      if (i % (chunkSize * 10) === 0) {
+        setThermalStatus('Imprimiendo… ' + Math.min(99, Math.round(i / data.length * 100)) + '%');
       }
     }
-    setThermalStatus('Datos enviados. La impresora está procesando el ticket…');
-    await thermalDelay(500);
-    // FOOTER Phomymo — cierra el trabajo para poder imprimir el siguiente.
+    await thermalDelay(350);
+    // FOOTER Phomymo — cierra el trabajo para poder imprimir el siguiente
     await thermalBleSend(new Uint8Array([0x1f, 0xf0, 0x05, 0x00, 0x1f, 0xf0, 0x03, 0x00]));
-    // Dar más tiempo a la M110 cuando el raster es largo.
-    await thermalDelay(data.length > 60000 ? 2200 : (data.length > 25000 ? 1600 : 1000));
-    setThermalStatus('Transmisión finalizada. Verifica que el ticket haya salido completo.', true);
-    toast('Datos enviados a ' + thermalBle.name + '. Verifica la impresión.');
+    await thermalDelay(800); // dejar que la impresora termine antes del siguiente ticket
+    setThermalStatus('Listo. Puedes imprimir otra factura sin reconectar.', true);
+    toast('🖨️ Enviado a ' + thermalBle.name);
   } catch (e) {
     console.error('[thermal] print', e);
     setThermalStatus('Error: ' + (e.message || e), false);
@@ -8966,6 +8983,7 @@ btnSaveBanner.onclick = async () => {
   if (bPdf) bPdf.onclick = async () => {
     const e = empCfg();
     e.pdfNota = ((document.getElementById('setPdfNota') || {}).value || '').trim();
+    e.pdfLabels = Object.fromEntries(['Client','Doc','Address','Date','Number','Phone','Obs','Products','Total'].map(k => [k, ((document.getElementById('pdfLbl'+k)||{}).value || '').trim()]));
     e.pdfFontSize = Math.max(8, Math.min(18, parseInt((document.getElementById('setPdfFontSize') || {}).value, 10) || 10));
     settings.empresas = settings.empresas || {};
     settings.empresas[activeEmpresa] = e;
@@ -8977,6 +8995,11 @@ btnSaveBanner.onclick = async () => {
   if (bTh) bTh.onclick = async () => {
     const e = empCfg();
     e.thermalNota = ((document.getElementById('setThermalNota') || {}).value || '').trim();
+    e.thermalTitle = ((document.getElementById('setThermalTitle') || {}).value || '').trim();
+    e.thermalHeaderLines = ((document.getElementById('setThermalHeaderLines') || {}).value || '').trim();
+    e.thermalPaymentLines = ((document.getElementById('setThermalPaymentLines') || {}).value || '').trim();
+    e.thermalThanks = ((document.getElementById('setThermalThanks') || {}).value || '').trim();
+    e.thermalLabels = Object.fromEntries(['Client','Products','Total','Obs','Payment'].map(k=>[k,((document.getElementById('thLbl'+k)||{}).value||'').trim()]));
     e.thermalFontScale = Math.max(0.8, Math.min(1.6, parseFloat((document.getElementById('setThermalFontScale') || {}).value) || 1.1));
     e.thermalSizeCod = Math.max(16, Math.min(36, parseInt((document.getElementById('setThermalSizeCod') || {}).value, 10) || 28));
     e.thermalSizeBody = Math.max(12, Math.min(28, parseInt((document.getElementById('setThermalSizeBody') || {}).value, 10) || 18));
@@ -9861,24 +9884,24 @@ function syncContCajasInputs() {
   if (fi) fi.value = formatMoneyInput(contCajas.fisica || 0);
   if (inv) inv.value = formatMoneyInput(contCajas.inversiones || 0);
 }
-function readContCajasFromInputs() {
+function readContCajasFromInputs(changedId) {
   const el = document.getElementById('cajaElectronica');
   const fi = document.getElementById('cajaFisica');
   const inv = document.getElementById('cajaInversiones');
-  const todayIso = (typeof today === 'function') ? today() : new Date().toISOString().slice(0, 10);
+  const todayIso = new Date().toISOString();
   if (el) {
     const v = parseMoney(el.value);
-    if (v !== (+contCajas.electronica || 0)) contCajas.lastElectronica = todayIso;
+    if (changedId === 'cajaElectronica') contCajas.lastElectronica = todayIso;
     contCajas.electronica = v;
   }
   if (fi) {
     const v = parseMoney(fi.value);
-    if (v !== (+contCajas.fisica || 0)) contCajas.lastFisica = todayIso;
+    if (changedId === 'cajaFisica') contCajas.lastFisica = todayIso;
     contCajas.fisica = v;
   }
   if (inv) {
     const v = parseMoney(inv.value);
-    if (v !== (+contCajas.inversiones || 0)) contCajas.lastInversiones = todayIso;
+    if (changedId === 'cajaInversiones') contCajas.lastInversiones = todayIso;
     contCajas.inversiones = v;
   }
   try { updateCajaDaysUI(); } catch (e) {}
@@ -10417,7 +10440,7 @@ async function saveContEntry() {
     const el = document.getElementById(id);
     if (!el) return;
     el.addEventListener('input', async () => {
-      readContCajasFromInputs();
+      readContCajasFromInputs(id);
       updateContCajasUI();
       await autoSave();
     });
@@ -11113,23 +11136,17 @@ async function cleanEmbeddedImagesAndSave() {
 try { bindProdImageInputs(); } catch (e) {}
 
 /* ===== Contadores días cajas / resúmenes dinero / año contable / FX ===== */
-function daysSinceIso(iso) {
-  if (!iso) return null;
-  try {
-    const t = new Date(String(iso).length <= 10 ? iso + 'T12:00:00' : iso);
-    if (isNaN(t.getTime())) return null;
-    const now = new Date();
-    const a = new Date(t.getFullYear(), t.getMonth(), t.getDate());
-    const b = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    return Math.round((b - a) / 86400000);
-  } catch (e) { return null; }
-}
 function formatCajaDays(iso) {
-  const d = daysSinceIso(iso);
-  if (d == null) return '· sin anotar';
-  if (d === 0) return '· hoy';
-  if (d === 1) return '· hace 1 día';
-  return '· hace ' + d + ' días';
+  if (!iso) return '· sin anotar';
+  const t = new Date(String(iso).length <= 10 ? String(iso) + 'T12:00:00' : iso);
+  if (isNaN(t.getTime())) return '· sin anotar';
+  let ms = Math.max(0, Date.now() - t.getTime());
+  const days = Math.floor(ms / 86400000); ms -= days * 86400000;
+  const hours = Math.floor(ms / 3600000); ms -= hours * 3600000;
+  const mins = Math.floor(ms / 60000);
+  if (days) return '· hace ' + days + ' d ' + hours + ' h';
+  if (hours) return '· hace ' + hours + ' h ' + mins + ' min';
+  return '· hace ' + mins + ' min';
 }
 function updateCajaDaysUI() {
   const map = [
@@ -11142,6 +11159,7 @@ function updateCajaDaysUI() {
     if (el) el.textContent = formatCajaDays(x[1]);
   });
 }
+if (!window._cajaDaysTicker) window._cajaDaysTicker = setInterval(function(){ try { updateCajaDaysUI(); } catch(e){} }, 60000);
 function updateGuardadasMoneyHint() {
   let porCobrar = 0, nSaldo = 0, nPend = 0, nCot = 0, nFin = 0, nTot = 0, nFact = 0, nProy = 0, ventaTot = 0;
   (invoices || []).forEach(function (inv) {
@@ -11299,9 +11317,13 @@ function renderHomeFx() {
     return;
   }
   box.innerHTML = rates.map(function (r) {
+    const pct = Number(r.changePct || 0);
+    const color = pct > 0 ? '#35d07f' : (pct < 0 ? '#ff5c6c' : 'var(--muted)');
+    const arrow = r.direction === 'up' ? '↑' : (r.direction === 'down' ? '↓' : '→');
+    const movement = r.previousRate > 0 ? '<span style="font-size:10px;color:'+color+';white-space:nowrap">'+arrow+' '+(pct>0?'+':'')+pct.toFixed(2)+'%</span>' : '';
     return '<div class="fx-row"><span class="fx-emoji">' + (r.emoji || '💱') + '</span><span class="fx-code">' +
       escapeHtml(r.code || '') + '</span><span class="fx-name">' + escapeHtml(r.name || '') +
-      '</span><span class="fx-rate">' + money(r.rate || 0) + '</span></div>';
+      '</span><span class="fx-rate">' + money(r.rate || 0) + '</span>' + movement + '</div>';
   }).join('');
 }
 function renderFxArchivo() {
@@ -11330,6 +11352,7 @@ function fxCollectEditList() {
   const out = [];
   rows.forEach(function (row, i) {
     out.push({
+      ...(settings.fx.rates[i] || {}),
       id: (settings.fx.rates[i] && settings.fx.rates[i].id) || (Date.now() + i),
       emoji: (row.querySelector('.fx-e-emoji') || {}).value || '💱',
       code: ((row.querySelector('.fx-e-code') || {}).value || '').trim().toUpperCase(),
@@ -11436,7 +11459,14 @@ async function fxFetchOne(index, silent) {
     const data = await res.json();
     const val = extractRateFromJson(data, r.code || '');
     if (val == null || !(val > 0)) throw new Error('JSON sin tasa usable');
-    r.rate = Math.round(val * 100) / 100;
+    const oldRate = Number(r.rate) || 0;
+    const newRate = Math.round(val * 100) / 100;
+    if (oldRate > 0) {
+      r.previousRate = oldRate;
+      r.changePct = Math.round(((newRate - oldRate) / oldRate) * 10000) / 100;
+      r.direction = newRate > oldRate ? 'up' : (newRate < oldRate ? 'down' : 'same');
+    } else { r.previousRate = 0; r.changePct = 0; r.direction = 'same'; }
+    r.rate = newRate;
     renderHomeFx();
     renderFxArchivo();
     try { autoSave(); } catch (e) {}
