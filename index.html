@@ -7831,7 +7831,7 @@ function buildThermalHtml(inv) {
   const e = empCfg(inv.empresa || activeEmpresa);
   const cod = invNumeroDisplay(inv);
   const banner = ''; // sin encabezado gráfico
-  const qrImg = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=2&data=' + encodeURIComponent(String(cod));
+  // QR omitido en térmica: libera ~25mm y evita fallos en tickets largos
   const items = (inv.items || []).map(function (it) {
     const cant = it.cant || 0;
     const name = escapeHtml(it.name || '');
@@ -7868,7 +7868,6 @@ function buildThermalHtml(inv) {
     'body{margin:0;padding:6px 8px 14px;width:58mm;max-width:58mm;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.35;color:#000;background:#fff}',
     '.center{text-align:center}',
     '.banner{width:100%;max-height:28mm;object-fit:contain;display:block;margin:0 auto 4px}',
-    '.qr{width:28mm;height:28mm;display:block;margin:4px auto 2px}',
     '.cod{font-weight:800;font-size:15px;margin-bottom:6px}',
     '.line{border-top:1px dashed #000;margin:6px 0}',
     '.sec{font-weight:800;font-size:12px;margin:6px 0 2px;text-transform:uppercase}',
@@ -7880,7 +7879,6 @@ function buildThermalHtml(inv) {
     '.pay{font-size:12px;line-height:1.4;margin-top:4px}',
     '</style></head><body>',
     '<div class="center">' + bannerHtml +
-    '<img class="qr" src="' + qrImg + '" alt="QR">' +
     '<div class="cod">' + escapeHtml(cod) + '</div></div>',
     '<div class="small center"><strong>' + escapeHtml(e.thermalTitle || e.name || e.label || '') + '</strong><br>',
     String(e.thermalHeaderLines || '').split(/\\n/).filter(Boolean).map(x => escapeHtml(x)).join('<br>') + (e.thermalHeaderLines ? '<br>' : ''),
@@ -8276,8 +8274,7 @@ async function thermalRenderCanvas(inv) {
 
   const measure = document.createElement('canvas').getContext('2d');
   let needH = pad + 8;
-  // espacio QR 96px (mismo tamaño que el respaldo que imprime bien)
-  needH += 8 + 96 + 8;
+  // sin QR: más espacio útil y menos riesgo de buffer lleno en Phomemo
   lines.forEach(function (L) {
     measure.font = (L.bold ? 'bold ' : '') + L.size + 'px monospace,Arial,sans-serif';
     const maxW = W - pad * 2;
@@ -8305,27 +8302,6 @@ async function thermalRenderCanvas(inv) {
   ctx.fillStyle = '#000000';
 
   let y = pad;
-
-  // QR — MISMO método y tamaño 96 que el respaldo que imprime bien
-  try {
-    await new Promise(function (resolve) {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      let done = false;
-      const fin = function () { if (!done) { done = true; resolve(); } };
-      img.onload = function () {
-        try {
-          const qs = 96;
-          ctx.drawImage(img, (W - qs) / 2, y, qs, qs);
-          y += qs + 6;
-        } catch (e) {}
-        fin();
-      };
-      img.onerror = fin;
-      img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=96x96&margin=1&data=' + encodeURIComponent(String(cod));
-      setTimeout(fin, 2000);
-    });
-  } catch (e) {}
 
   ctx.fillStyle = '#000000';
   lines.forEach(function (L) {
@@ -8407,39 +8383,44 @@ async function thermalBlePrint() {
 
     // Asegurar canal vivo (impresiones 2, 3… sin apagar impresora)
     await thermalBleEnsure();
-    await thermalDelay(100);
+    await thermalDelay(120);
 
-    setThermalStatus('Imprimiendo… 0% (' + blackBits + ' px negros)');
-    // printM110 (Phomymo): SPEED + DENSITY + MEDIA continuous + raster + FOOTER
-    // Sin ESC @ entre trabajos (deja el buffer en mal estado en 2ª impresión)
+    // Phomemo M110: un raster muy alto a veces se acepta por BLE pero no imprime.
+    // Enviamos en franjas de máx. 400 líneas (continuous paper).
+    const BAND = 400;
+    const totalBands = Math.max(1, Math.ceil(heightLines / BAND));
+    setThermalStatus('Imprimiendo… 0% · ' + heightLines + ' líneas · ' + totalBands + ' bloque(s)');
+
     await thermalBleSend(new Uint8Array([0x1b, 0x4e, 0x0d, 5])); // SPEED
-    await thermalDelay(40);
+    await thermalDelay(50);
     await thermalBleSend(new Uint8Array([0x1b, 0x4e, 0x04, 12])); // DENSITY
-    await thermalDelay(40);
-    // 0x0b = continuous (papel continuo); 0x0a = etiquetas con gap
-    await thermalBleSend(new Uint8Array([0x1f, 0x11, 0x0b]));
-    await thermalDelay(40);
-    await thermalBleSend(new Uint8Array([
-      0x1d, 0x76, 0x30, 0x00,
-      widthBytes & 0xff, 0x00,
-      heightLines & 0xff, (heightLines >> 8) & 0xff
-    ]));
+    await thermalDelay(50);
+    await thermalBleSend(new Uint8Array([0x1f, 0x11, 0x0b])); // continuous
+    await thermalDelay(50);
 
-    const chunkSize = 128;
-    for (let i = 0; i < data.length; i += chunkSize) {
-      const end = Math.min(i + chunkSize, data.length);
-      // Copia del slice (evita problemas de buffer compartido)
-      const chunk = data.slice(i, end);
-      await thermalBleSend(chunk);
-      await thermalDelay(25);
-      if (i % (chunkSize * 10) === 0) {
-        setThermalStatus('Imprimiendo… ' + Math.min(99, Math.round(i / data.length * 100)) + '%');
+    const chunkSize = 64; // chunks más chicos = más estable en tickets largos
+    for (let band = 0, y0 = 0; y0 < heightLines; band++, y0 += BAND) {
+      const hBand = Math.min(BAND, heightLines - y0);
+      const slice = data.subarray(y0 * widthBytes, (y0 + hBand) * widthBytes);
+      await thermalBleSend(new Uint8Array([
+        0x1d, 0x76, 0x30, 0x00,
+        widthBytes & 0xff, 0x00,
+        hBand & 0xff, (hBand >> 8) & 0xff
+      ]));
+      const interDelay = heightLines > 600 ? 35 : 22;
+      for (let i = 0; i < slice.length; i += chunkSize) {
+        const end = Math.min(i + chunkSize, slice.length);
+        await thermalBleSend(slice.slice(i, end));
+        await thermalDelay(interDelay);
       }
+      const pct = Math.min(99, Math.round(((y0 + hBand) / heightLines) * 100));
+      setThermalStatus('Imprimiendo… ' + pct + '% · bloque ' + (band + 1) + '/' + totalBands);
+      await thermalDelay(180);
     }
-    await thermalDelay(350);
+    await thermalDelay(400);
     // FOOTER Phomymo — cierra el trabajo para poder imprimir el siguiente
     await thermalBleSend(new Uint8Array([0x1f, 0xf0, 0x05, 0x00, 0x1f, 0xf0, 0x03, 0x00]));
-    await thermalDelay(800); // dejar que la impresora termine antes del siguiente ticket
+    await thermalDelay(900);
     setThermalStatus('Listo. Puedes imprimir otra factura sin reconectar.', true);
     toast('🖨️ Enviado a ' + thermalBle.name);
   } catch (e) {
@@ -8587,19 +8568,25 @@ async function thermalUsbPrint() {
     const widthBytes = raster.widthBytes;
     const heightLines = raster.heightLines;
     if (heightLines < 8) throw new Error('Ticket demasiado corto');
-    setThermalStatus('Imprimiendo USB…');
+    setThermalStatus('Imprimiendo USB… ' + heightLines + ' líneas');
     await thermalUsbSend(new Uint8Array([0x1b, 0x4e, 0x0d, 5]));
     await thermalDelay(40);
     await thermalUsbSend(new Uint8Array([0x1b, 0x4e, 0x04, 12]));
     await thermalDelay(40);
     await thermalUsbSend(new Uint8Array([0x1f, 0x11, 0x0b]));
     await thermalDelay(40);
-    await thermalUsbSend(new Uint8Array([
-      0x1d, 0x76, 0x30, 0x00,
-      widthBytes & 0xff, 0x00,
-      heightLines & 0xff, (heightLines >> 8) & 0xff
-    ]));
-    await thermalUsbSend(data);
+    const USB_BAND = 500;
+    for (let y0 = 0; y0 < heightLines; y0 += USB_BAND) {
+      const hBand = Math.min(USB_BAND, heightLines - y0);
+      const slice = data.subarray(y0 * widthBytes, (y0 + hBand) * widthBytes);
+      await thermalUsbSend(new Uint8Array([
+        0x1d, 0x76, 0x30, 0x00,
+        widthBytes & 0xff, 0x00,
+        hBand & 0xff, (hBand >> 8) & 0xff
+      ]));
+      await thermalUsbSend(slice);
+      await thermalDelay(120);
+    }
     await thermalDelay(350);
     await thermalUsbSend(new Uint8Array([0x1f, 0xf0, 0x05, 0x00, 0x1f, 0xf0, 0x03, 0x00]));
     await thermalDelay(500);
