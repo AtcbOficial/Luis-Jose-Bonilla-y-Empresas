@@ -8385,9 +8385,11 @@ async function thermalBlePrint() {
     await thermalBleEnsure();
     await thermalDelay(100);
 
-    // UN solo raster continuo (sin franjas): evita pausas/huecos en el papel.
-    // QR ya no va en térmica → menos altura y más fiabilidad en tickets largos.
-    setThermalStatus('Imprimiendo… 0% · ' + heightLines + ' líneas');
+    // Límite empírico Phomemo M110: ~1064 líneas OK, ~1203 falla.
+    // Usamos franjas grandes (1000) SOLO si hace falta → mínimo de juntas.
+    const MAX_BAND = 1000;
+    const totalBands = Math.max(1, Math.ceil(heightLines / MAX_BAND));
+    setThermalStatus('Imprimiendo… 0% · ' + heightLines + ' líneas' + (totalBands > 1 ? (' · ' + totalBands + ' tramos') : ''));
 
     await thermalBleSend(new Uint8Array([0x1b, 0x4e, 0x0d, 5])); // SPEED
     await thermalDelay(40);
@@ -8396,26 +8398,36 @@ async function thermalBlePrint() {
     await thermalBleSend(new Uint8Array([0x1f, 0x11, 0x0b])); // continuous
     await thermalDelay(40);
 
-    // Cabecera raster: altura completa en un solo trabajo
-    await thermalBleSend(new Uint8Array([
-      0x1d, 0x76, 0x30, 0x00,
-      widthBytes & 0xff, 0x00,
-      heightLines & 0xff, (heightLines >> 8) & 0xff
-    ]));
-
-    // Chunks estables; delay un poco mayor si el ticket es largo
     const chunkSize = 96;
-    const interDelay = heightLines > 800 ? 28 : (heightLines > 500 ? 22 : 18);
-    for (let i = 0; i < data.length; i += chunkSize) {
-      const end = Math.min(i + chunkSize, data.length);
-      await thermalBleSend(data.slice(i, end));
-      await thermalDelay(interDelay);
-      if (i % (chunkSize * 12) === 0) {
-        setThermalStatus('Imprimiendo… ' + Math.min(99, Math.round(i / data.length * 100)) + '% · ' + heightLines + ' líneas');
+    const interDelay = heightLines > 800 ? 26 : (heightLines > 500 ? 20 : 16);
+
+    for (let band = 0, y0 = 0; y0 < heightLines; band++, y0 += MAX_BAND) {
+      const hBand = Math.min(MAX_BAND, heightLines - y0);
+      const slice = data.subarray(y0 * widthBytes, (y0 + hBand) * widthBytes);
+
+      // Un GS v 0 por tramo (máx 1000 líneas)
+      await thermalBleSend(new Uint8Array([
+        0x1d, 0x76, 0x30, 0x00,
+        widthBytes & 0xff, 0x00,
+        hBand & 0xff, (hBand >> 8) & 0xff
+      ]));
+
+      for (let i = 0; i < slice.length; i += chunkSize) {
+        const end = Math.min(i + chunkSize, slice.length);
+        await thermalBleSend(slice.slice(i, end));
+        await thermalDelay(interDelay);
+        if (i % (chunkSize * 10) === 0) {
+          const done = y0 * widthBytes + i;
+          const pct = Math.min(99, Math.round(done / data.length * 100));
+          setThermalStatus('Imprimiendo… ' + pct + '% · ' + heightLines + ' líneas' + (totalBands > 1 ? (' · tramo ' + (band + 1) + '/' + totalBands) : ''));
+        }
       }
+      // Pausa mínima entre tramos (solo si hay más) — deja vaciar buffer sin alargar el hueco
+      if (y0 + hBand < heightLines) await thermalDelay(120);
     }
+
     await thermalDelay(400);
-    // FOOTER Phomymo — cierra el trabajo para poder imprimir el siguiente
+    // FOOTER una sola vez al final
     await thermalBleSend(new Uint8Array([0x1f, 0xf0, 0x05, 0x00, 0x1f, 0xf0, 0x03, 0x00]));
     await thermalDelay(800);
     setThermalStatus('Listo. Puedes imprimir otra factura sin reconectar.', true);
@@ -8572,13 +8584,19 @@ async function thermalUsbPrint() {
     await thermalDelay(40);
     await thermalUsbSend(new Uint8Array([0x1f, 0x11, 0x0b]));
     await thermalDelay(40);
-    // Un solo raster continuo (sin franjas) para no dejar huecos
-    await thermalUsbSend(new Uint8Array([
-      0x1d, 0x76, 0x30, 0x00,
-      widthBytes & 0xff, 0x00,
-      heightLines & 0xff, (heightLines >> 8) & 0xff
-    ]));
-    await thermalUsbSend(data);
+    // Mismo criterio que BLE: un tramo si cabe; si no, franjas de 1000
+    const USB_MAX = 1000;
+    for (let y0 = 0; y0 < heightLines; y0 += USB_MAX) {
+      const hBand = Math.min(USB_MAX, heightLines - y0);
+      const slice = data.subarray(y0 * widthBytes, (y0 + hBand) * widthBytes);
+      await thermalUsbSend(new Uint8Array([
+        0x1d, 0x76, 0x30, 0x00,
+        widthBytes & 0xff, 0x00,
+        hBand & 0xff, (hBand >> 8) & 0xff
+      ]));
+      await thermalUsbSend(slice);
+      if (y0 + hBand < heightLines) await thermalDelay(80);
+    }
     await thermalDelay(350);
     await thermalUsbSend(new Uint8Array([0x1f, 0xf0, 0x05, 0x00, 0x1f, 0xf0, 0x03, 0x00]));
     await thermalDelay(500);
