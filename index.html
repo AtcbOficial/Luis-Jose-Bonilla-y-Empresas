@@ -1655,6 +1655,8 @@ header #empresaSelect{
           <p class="hint">Solo URL pública. No se sube archivo (más liviano en Firebase).</p>
         </div>
       </div>
+      <label class="label">https://... imagen ficha técnica</label>
+      <input type="url" id="pFichaTecnicaUrl" placeholder="https://... imagen ficha técnica" autocomplete="off" style="margin-bottom:6px">
       <input id="pFamilia" placeholder="Familia olfativa (amaderado, cítrico, dulce…)" style="margin-bottom:6px" autocomplete="off">
       <textarea id="pObs" placeholder="Observaciones, notas…" style="margin-bottom:6px;min-height:56px"></textarea>
       <div id="prodLabBox" style="display:none;margin:8px 0;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--card2)">
@@ -1726,6 +1728,8 @@ header #empresaSelect{
       <label class="label">Link imagen (https://…)</label>
       <input type="url" id="insImgUrl" placeholder="https://… foto del insumo" style="margin-bottom:4px">
       <p class="hint" style="margin:0 0 6px">Solo URL pública (misma lógica que stock). No se sube archivo.</p>
+      <label class="label">https://... imagen ficha técnica</label>
+      <input type="url" id="insFichaTecnicaUrl" placeholder="https://... imagen ficha técnica" style="margin-bottom:8px">
       <img id="insImgPreview" class="prod-img-preview" alt="preview" style="margin-bottom:8px">
       <div class="grid2" style="margin-bottom:6px">
         <input id="insPrecio" type="number" min="0" step="0.0001" placeholder="Precio base ($/g o $/ud)">
@@ -1805,6 +1809,7 @@ header #empresaSelect{
           <img id="labImgPreview" class="prod-img-preview" alt="Foto producto">
           <div class="prod-img-actions">
             <input type="url" id="labImgUrl" placeholder="https://… imagen del producto" autocomplete="off">
+            <input type="url" id="labFichaTecnicaUrl" placeholder="https://... imagen ficha técnica" autocomplete="off" style="margin-top:6px">
             <button type="button" class="sm danger" id="labImgClear">🗑️ Quitar imagen</button>
           </div>
         </div>
@@ -3688,6 +3693,7 @@ function loadFromObj(obj) {
       obs: p.obs || '',
       codigo: (p.codigo != null ? String(p.codigo) : (p.codeId != null ? String(p.codeId) : '')),
       img: (typeof p.img === 'string' && p.img.indexOf('http') === 0) ? p.img : '',
+      fichaTecnica: normImgUrl(p.fichaTecnica || p.imgFichaTecnica || ''),
       familia: p.familia || p.familiaOlfativa || '',
       obs: p.obs || '',
       empresa: (p.empresa === EMPRESA_PERFUMES || p.empresa === 'perfumes') ? EMPRESA_PERFUMES : EMPRESA_ATCB
@@ -3788,6 +3794,7 @@ function loadFromObj(obj) {
   insumos = (obj.insumos || []).map(i => ({
     codigo: i.codigo != null ? String(i.codigo) : '',
     img: (i.img && String(i.img).indexOf('http') === 0) ? String(i.img) : '',
+    fichaTecnica: normImgUrl(i.fichaTecnica || i.imgFichaTecnica || ''),
     id: +i.id || 0,
     cat: i.cat === 'implemento' ? 'implemento' : 'quimico',
     producto: i.producto || i.name || '',
@@ -5037,6 +5044,7 @@ function exportCatalogSelection() {
       codigo,
       nombre: String(nombre || '').trim(),
       img,
+      fichaTecnica: normImgUrl(p.fichaTecnica || ''),
       familia: String(p.familia || p.familiaOlfativa || '').trim(),
       obs: String(p.obs || '').trim()
     });
@@ -5120,7 +5128,6 @@ function renderProducts() {
           <div class="line">🏷️ ${escapeHtml(priceTxt)}</div>
           <div class="line">🛒 Vendido: <strong>${vendido}</strong> ud en facturas</div>
           ${(p.familia || p.familiaOlfativa) ? `<div class="line">👃 ${escapeHtml(p.familia || p.familiaOlfativa)}</div>` : ''}
-          ${obs ? `<div class="line">📝 ${escapeHtml(obs)}</div>` : ''}
           <div class="row-actions" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap">
             <button type="button" class="sm warn" onclick="viewProdDetail(${p.id})" title="Ver detalles">👀</button>
             <button type="button" class="sm success" onclick="showProdQr(${p.id})" title="QR para sticker">📷 QR</button>
@@ -5253,6 +5260,7 @@ async function editProd(id) {
   }
   const pUrl = document.getElementById('pImgUrl');
   if (pUrl) pUrl.value = normImgUrl(p.img || '');
+  const pFichaUrl = document.getElementById('pFichaTecnicaUrl'); if (pFichaUrl) pFichaUrl.value = normImgUrl(p.fichaTecnica || '');
   setProdImgPreview(document.getElementById('pImgPreview'), normImgUrl(p.img || '') || '');
   const pFamEl = document.getElementById('pFamilia');
   if (pFamEl) pFamEl.value = p.familia || p.familiaOlfativa || '';
@@ -5320,6 +5328,7 @@ btnNewProd.onclick = () => {
     pCod.title = 'Se asigna solo; puedes ajustarlo si hace falta';
   }
   clearProdImgUI('p');
+  const pFichaUrl = document.getElementById('pFichaTecnicaUrl'); if (pFichaUrl) pFichaUrl.value = '';
   const pFamEl = document.getElementById('pFamilia'); if (pFamEl) pFamEl.value = '';
   const pObsEl = document.getElementById('pObs'); if (pObsEl) pObsEl.value = '';
   prodLabQ = []; prodLabI = [];
@@ -5368,6 +5377,7 @@ btnSaveProd.onclick = async () => {
   if (!assertCodigoLibre(codigo, editingProdId, activeEmpresa)) return;
   if (pCodEl) pCodEl.value = codigo;
   const img = getProdImgFromUI('p');
+  const fichaTecnica = normImgUrl((document.getElementById('pFichaTecnicaUrl') || {}).value || '');
   const labBox = document.getElementById('prodLabBox');
   const labOpen = labBox && labBox.style.display !== 'none';
   let lab = null;
@@ -5424,6 +5434,7 @@ btnSaveProd.onclick = async () => {
     prev.familia = (typeof familia !== 'undefined' ? familia : ((document.getElementById('pFamilia') || {}).value || '').trim());
     prev.codigo = codigo;
     prev.img = img || '';
+    prev.fichaTecnica = fichaTecnica || prev.fichaTecnica || '';
     products[i] = prev;
     const sel = document.getElementById('pLabML');
     if (sel) sel.disabled = false;
@@ -5449,6 +5460,7 @@ btnSaveProd.onclick = async () => {
     familia: (typeof familia !== 'undefined' ? familia : ((document.getElementById('pFamilia') || {}).value || '').trim()),
     codigo,
     img: img || '',
+    fichaTecnica: fichaTecnica || (editingProdId ? ((products.find(x => +x.id === +editingProdId) || {}).fichaTecnica || '') : ''),
     empresa: activeEmpresa
   };
   if (lab) data.lab = lab;
@@ -5579,8 +5591,12 @@ function viewProdDetail(id) {
   if (imgSrc) {
     html += `<div style="margin-bottom:10px;text-align:center"><img src="${imgSrc}" alt="" style="max-width:100%;max-height:200px;object-fit:contain;border-radius:10px;border:1px solid var(--border);background:#0e151d" onerror="this.style.display='none'"></div>`;
     if (String(imgSrc).indexOf('http') === 0) {
-      html += `<div class="d-row" style="font-size:11px;word-break:break-all"><strong>Link:</strong> <a href="${imgSrc}" target="_blank" rel="noopener" style="color:var(--accent)">abrir imagen</a></div>`;
+      html += `<div class="d-row" style="font-size:11px;word-break:break-all"><strong>Link:</strong> <a href="${imgSrc}" target="_blank" rel="noopener" style="color:var(--accent)">abrir imagen</a> · <button type="button" class="sm secondary" onclick="copyFichaLink('${imgSrc.replace(/'/g, '&#39;')}')">📋 Copiar link</button></div>`;
     }
+  }
+  const fichaSrc = normImgUrl(p.fichaTecnica || '');
+  if (fichaSrc) {
+    html += `<div style="margin:10px 0;text-align:center;background:#0a0e14;border:1px solid var(--border);border-radius:12px;padding:6px"><img src="${fichaSrc}" alt="Ficha técnica" style="display:block;width:100%;height:auto;max-height:72vh;object-fit:contain;margin:0 auto" onerror="this.parentElement.style.display='none'"></div><div class="d-row" style="word-break:break-all"><strong>Ficha técnica:</strong> <a href="${fichaSrc}" target="_blank" rel="noopener" style="color:var(--accent)">abrir imagen</a> · <button type="button" class="sm secondary" onclick="copyFichaLink('${fichaSrc.replace(/'/g, '&#39;')}')">📋 Copiar link</button></div>`;
   }
   html += `<div class="d-row">🧴 <strong>Nombre:</strong> ${escapeHtml(base)}</div>`;
   if (p.codigo) html += `<div class="d-row">🪪 <strong>Código id:</strong> ${escapeHtml(p.codigo)}</div>`;
@@ -5852,7 +5868,6 @@ function renderProveedores() {
           <div class="line">📍 ${escapeHtml(v.direccion || '—')}</div>
           ${v.email ? `<div class="line">✉️ ${escapeHtml(v.email)}</div>` : ''}
           ${web ? `<div class="line">🔗 <a href="${escapeHtml(web)}" target="_blank" rel="noopener" style="color:var(--accent)">${escapeHtml(v.web)}</a></div>` : ''}
-          ${v.obs ? `<div class="line" style="white-space:pre-wrap">📝 ${escapeHtml(v.obs)}</div>` : ''}
           <div class="row-actions" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap">
             <button type="button" class="sm warn" onclick="viewProvDetail(${v.id})" title="Ver detalles">👀</button>
             ${wa ? `<a class="sm warn" href="${wa}" target="_blank" rel="noopener" title="WhatsApp">📲</a>` : ''}
@@ -10532,6 +10547,24 @@ function addInsProvOffer() {
   renderInsProvOffers();
 }
 
+
+async function copyFichaLink(url) {
+  const value = String(url || '').trim();
+  if (!value) return toast('No hay enlace para copiar');
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(value);
+    else { const t=document.createElement('textarea'); t.value=value; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+    toast('Link de ficha técnica copiado');
+  } catch (e) { toast('No se pudo copiar el enlace'); }
+}
+function viewLabInsDetail(index, cat) {
+  const row = cat === 'quimico' ? (labQ || [])[index] : (labI || [])[index];
+  if (!row || !String(row.prod || '').trim()) return toast('Primero selecciona un insumo');
+  const found = (insumos || []).find(x => x.cat === cat && normInsName(x.producto) === normInsName(row.prod));
+  if (!found) return toast('No encontré ese insumo en el registro');
+  viewInsDetail(found.id);
+}
+
 function viewInsDetail(id) {
   const i = (insumos || []).find(x => +x.id === +id);
   if (!i) return;
@@ -10543,13 +10576,13 @@ function viewInsDetail(id) {
   const catLabel = i.cat === 'quimico' ? 'Químico (gramos)' : 'Implemento (unidades)';
   if (title) title.textContent = '👀 ' + (i.producto || 'Insumo');
   let html = '';
-  const imgSrc = (i.img && String(i.img).indexOf('http') === 0) ? i.img : '';
+  const imgSrc = normImgUrl(i.fichaTecnica || i.img || '');
   if (imgSrc) {
     // Ficha técnica: ancha al 100% del modal, alta, sin distorsión (object-fit:contain)
     html += `<div class="ins-ficha-wrap" style="margin:0 0 12px;text-align:center;width:100%;padding:0;background:#0a0e14;border-radius:12px;border:1px solid var(--border);overflow:hidden">` +
       `<img src="${imgSrc}" alt="Ficha técnica" style="display:block;width:100%;max-width:100%;height:auto;max-height:min(72vh,640px);object-fit:contain;object-position:center;margin:0 auto;background:#0a0e14" onerror="this.parentElement.style.display='none'">` +
       `</div>`;
-    html += `<div class="d-row" style="font-size:11px;word-break:break-all"><strong>Link:</strong> <a href="${imgSrc}" target="_blank" rel="noopener" style="color:var(--accent)">abrir imagen</a></div>`;
+    html += `<div class="d-row" style="font-size:11px;word-break:break-all"><strong>Link:</strong> <a href="${imgSrc}" target="_blank" rel="noopener" style="color:var(--accent)">abrir imagen</a> · <button type="button" class="sm secondary" onclick="copyFichaLink('${imgSrc.replace(/'/g, '&#39;')}')">📋 Copiar link</button></div>`;
   }
   html += `<div class="d-row">🧴 <strong>Nombre:</strong> ${escapeHtml(i.producto || '')}</div>`;
   if (i.codigo) html += `<div class="d-row">🪪 <strong>Código id:</strong> ${escapeHtml(i.codigo)}</div>`;
@@ -10635,7 +10668,6 @@ function renderInsumos() {
           <div class="line">Precio base: <strong>$ ${formatMoneyInput(i.precio)}</strong> / ${und} · Stock: <strong>${i.stock || 0}</strong></div>
           ${provLines || '<div class="line" style="color:var(--muted)">🏭 Sin proveedores anotados</div>'}
           ${(i.familia || i.familiaOlfativa) ? `<div class="line">👃 ${escapeHtml(i.familia || i.familiaOlfativa)}</div>` : ''}
-          ${obs ? `<div class="line">📝 ${escapeHtml(obs)}</div>` : ''}
           <div class="row-actions" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap">
             <button type="button" class="sm warn" onclick="viewInsDetail(${i.id})" title="Ver detalles">👀</button>
             <button type="button" class="sm success" onclick="showInsQr(${i.id})" title="QR sticker">📷 QR</button>
@@ -10663,6 +10695,7 @@ function openInsForm(isNew) {
     const ic = document.getElementById('insCodigo');
     if (ic) ic.value = nextInsCodigo('quimico');
     const iu = document.getElementById('insImgUrl'); if (iu) iu.value = '';
+    const ift = document.getElementById('insFichaTecnicaUrl'); if (ift) ift.value = '';
     const ip = document.getElementById('insImgPreview'); if (ip) { ip.src = ''; ip.classList.remove('show'); }
     insProvOffers = [];
     renderInsProvOffers();
@@ -10684,6 +10717,7 @@ function editInsumo(id) {
   const iu = document.getElementById('insImgUrl');
   const imgv = (i.img && String(i.img).indexOf('http') === 0) ? i.img : '';
   if (iu) iu.value = imgv;
+  const ift = document.getElementById('insFichaTecnicaUrl'); if (ift) ift.value = normImgUrl(i.fichaTecnica || '');
   const ip = document.getElementById('insImgPreview');
   if (ip) { if (imgv) { ip.src = imgv; ip.classList.add('show'); } else { ip.src = ''; ip.classList.remove('show'); } }
   insProvOffers = (i.proveedores || []).map(pv => ({ id: +pv.id, nombre: pv.nombre || '', precio: +pv.precio || 0 }));
@@ -10930,6 +10964,7 @@ async function saveInsumo() {
     producto,
     codigo,
     img: img || '',
+    fichaTecnica: normImgUrl((document.getElementById('insFichaTecnicaUrl') || {}).value || ''),
     precio: parseFloat(document.getElementById('insPrecio').value) || 0,
     stock: parseFloat(document.getElementById('insStock').value) || 0,
     obs: ((document.getElementById('insObs') || {}).value || '').trim(),
@@ -11007,7 +11042,8 @@ function renderLabQuim() {
     const gVal = (l.g != null && l.g !== '' && +l.g !== 0) ? l.g : '';
     const pVal = (l.precio != null && l.precio !== '' && +l.precio !== 0) ? l.precio : '';
     return `<div class="line-item" style="grid-template-columns:1fr">
-      <div style="display:grid;grid-template-columns:minmax(0,1fr) 70px 78px;gap:6px;margin-bottom:4px;align-items:start">
+      <div style="display:grid;grid-template-columns:34px minmax(0,1fr) 70px 78px;gap:6px;margin-bottom:4px;align-items:start">
+        <button type="button" class="sm warn" style="padding:8px 9px" onclick="viewLabInsDetail(${i},'quimico')" title="Ver ficha del insumo">👀</button>
         <div class="search-wrap">
           <input value="${escapeHtml(l.prod || '')}" placeholder="🔍 Nombre químico..." autocomplete="off"
             oninput="labQ[${i}].prod=this.value;labInsSearch(${i},'quimico',this.value)"
@@ -11034,7 +11070,8 @@ function renderLabImp() {
     const uVal = (l.u != null && l.u !== '' && +l.u !== 0) ? l.u : '';
     const pVal = (l.precio != null && l.precio !== '' && +l.precio !== 0) ? l.precio : '';
     return `<div class="line-item" style="grid-template-columns:1fr">
-      <div style="display:grid;grid-template-columns:minmax(0,1fr) 70px 78px;gap:6px;margin-bottom:4px;align-items:start">
+      <div style="display:grid;grid-template-columns:34px minmax(0,1fr) 70px 78px;gap:6px;margin-bottom:4px;align-items:start">
+        <button type="button" class="sm warn" style="padding:8px 9px" onclick="viewLabInsDetail(${i},'implemento')" title="Ver ficha del insumo">👀</button>
         <div class="search-wrap">
           <input value="${escapeHtml(l.prod || '')}" placeholder="🔍 Nombre implemento..." autocomplete="off"
             oninput="labI[${i}].prod=this.value;labInsSearch(${i},'implemento',this.value)"
@@ -11203,6 +11240,7 @@ async function guardarStockLab() {
   let codigo = normCodigoId((document.getElementById('labCodigo') || {}).value || '');
   if (!codigo) codigo = nextCodigoId(EMPRESA_PERFUMES);
   const img = getProdImgFromUI('lab');
+  const fichaTecnica = normImgUrl((document.getElementById('labFichaTecnicaUrl') || {}).value || '');
   const lab = {
     ml,
     margen: r.margen || parseFloat((document.getElementById('labMargen') || {}).value) || 0,
@@ -11226,6 +11264,7 @@ async function guardarStockLab() {
     if (typeof familia !== 'undefined') p.familia = familia;
     p.codigo = codigo;
     p.img = img || p.img || '';
+    p.fichaTecnica = fichaTecnica || p.fichaTecnica || '';
     p.fecha = today();
     toast(nombre + ' · ' + ml + ' ml actualizado en stock');
   } else {
@@ -11242,6 +11281,7 @@ async function guardarStockLab() {
       familia,
       codigo: codigo || '',
       img: img || '',
+      fichaTecnica: fichaTecnica || '',
       lab,
       caps,
       empresa: EMPRESA_PERFUMES
