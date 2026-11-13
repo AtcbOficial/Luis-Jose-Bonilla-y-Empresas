@@ -5211,6 +5211,18 @@ function loadProdLabIntoForm(lab, ml) {
   prodLabI = ((lab && lab.imp) || []).map(x => ({...x}));
   if (!prodLabQ.length) prodLabQ = [{ prod: '', g: 0, precio: 0 }];
   if (!prodLabI.length) prodLabI = [{ prod: '', u: 1, precio: 0 }];
+  // Precios vivos desde insumos al abrir edición Lab
+  try {
+    const pm = buildInsumoPriceMap();
+    prodLabQ.forEach(function (l) {
+      const hit = pm[normInsName(l.prod)];
+      if (hit) l.precio = +hit.precio || 0;
+    });
+    prodLabI.forEach(function (l) {
+      const hit = pm[normInsName(l.prod)];
+      if (hit) l.precio = +hit.precio || 0;
+    });
+  } catch (e) {}
   fillPLabMLSelect(ml != null ? ml : (lab && lab.ml) || getLabCaps()[0]);
   const mg = document.getElementById('pLabMargen');
   if (mg) mg.value = (lab && lab.margen != null) ? lab.margen : 50;
@@ -5361,6 +5373,19 @@ btnSaveProd.onclick = async () => {
   let lab = null;
   let mlSel = null;
   if (labOpen) {
+    // Antes de guardar: alinear precios de la fórmula con insumos actuales
+    try {
+      const pm = buildInsumoPriceMap();
+      (prodLabQ || []).forEach(function (l) {
+        const hit = pm[normInsName(l.prod)];
+        if (hit) l.precio = +hit.precio || 0;
+      });
+      (prodLabI || []).forEach(function (l) {
+        const hit = pm[normInsName(l.prod)];
+        if (hit) l.precio = +hit.precio || 0;
+      });
+      if (typeof recalcProdLabCost === 'function') recalcProdLabCost();
+    } catch (e) {}
     mlSel = parseFloat((document.getElementById('pLabML') || {}).value) || 0;
     const allowed = getLabCaps();
     if (activeEmpresa === EMPRESA_PERFUMES || editingCapMl != null) {
@@ -10666,6 +10691,223 @@ function closeInsForm() {
   const panel = document.getElementById('insForm');
   if (panel) panel.classList.remove('open');
 }
+/** Normaliza nombre de insumo para emparejar fórmulas Lab */
+function normInsName(s) {
+  return String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+/** Mapa nombre→precio actual de insumos (químicos e implementos) */
+function buildInsumoPriceMap() {
+  const map = Object.create(null);
+  (insumos || []).forEach(function (ins) {
+    const k = normInsName(ins.producto);
+    if (!k) return;
+    map[k] = {
+      id: +ins.id,
+      producto: ins.producto || '',
+      precio: +ins.precio || 0,
+      cat: ins.cat === 'implemento' ? 'implemento' : 'quimico'
+    };
+  });
+  return map;
+}
+/**
+ * Actualiza precios de una fórmula Lab desde el mapa de insumos.
+ * Si renameFrom→renameTo, renombra el componente en la fórmula.
+ * Devuelve { lab, costo, pvp, changed }.
+ */
+function applyInsumoPricesToLab(lab, priceMap, renameFrom, renameTo) {
+  if (!lab || typeof lab !== 'object') return null;
+  const fromK = renameFrom ? normInsName(renameFrom) : '';
+  const toK = renameTo ? normInsName(renameTo) : '';
+  let changed = false;
+  const quim = (lab.quim || []).map(function (x) {
+    const row = { prod: x.prod || '', g: +x.g || 0, precio: +x.precio || 0 };
+    let k = normInsName(row.prod);
+    if (fromK && toK && k === fromK) {
+      row.prod = renameTo;
+      k = toK;
+      changed = true;
+    }
+    const hit = priceMap[k];
+    if (hit && Math.abs((+hit.precio || 0) - (+row.precio || 0)) > 0.00001) {
+      row.precio = +hit.precio || 0;
+      changed = true;
+    } else if (hit && row.prod !== hit.producto) {
+      row.prod = hit.producto;
+      changed = true;
+    }
+    return row;
+  });
+  const imp = (lab.imp || []).map(function (x) {
+    const row = { prod: x.prod || '', u: +x.u || 0, precio: +x.precio || 0 };
+    let k = normInsName(row.prod);
+    if (fromK && toK && k === fromK) {
+      row.prod = renameTo;
+      k = toK;
+      changed = true;
+    }
+    const hit = priceMap[k];
+    if (hit && Math.abs((+hit.precio || 0) - (+row.precio || 0)) > 0.00001) {
+      row.precio = +hit.precio || 0;
+      changed = true;
+    } else if (hit && row.prod !== hit.producto) {
+      row.prod = hit.producto;
+      changed = true;
+    }
+    return row;
+  });
+  let costo = 0;
+  quim.forEach(function (l) { costo += (l.g || 0) * (l.precio || 0); });
+  imp.forEach(function (l) { costo += (l.u || 0) * (l.precio || 0); });
+  const margen = +lab.margen || 0;
+  const pvp = costo + costo * (margen / 100);
+  const next = Object.assign({}, lab, {
+    quim: quim,
+    imp: imp,
+    margen: margen
+  });
+  return {
+    lab: next,
+    costo: Math.round(costo * 100) / 100,
+    pvp: Math.round(pvp * 100) / 100,
+    changed: changed
+  };
+}
+/**
+ * Recalcula productos Lab (stock Perfumes) cuando cambian insumos.
+ * No toca facturas. Solo compra/venta y fórmulas en products.
+ * opts: { names: string[], renameFrom, renameTo }
+ * Devuelve cantidad de productos actualizados.
+ */
+function syncLabProductsFromInsumos(opts) {
+  opts = opts || {};
+  const priceMap = buildInsumoPriceMap();
+  const filterNames = (opts.names || []).map(normInsName).filter(Boolean);
+  const renameFrom = opts.renameFrom || null;
+  const renameTo = opts.renameTo || null;
+  let updated = 0;
+  (products || []).forEach(function (p, idx) {
+    if ((p.empresa || EMPRESA_PERFUMES) !== EMPRESA_PERFUMES) return;
+    const caps = getProductCaps(p);
+    const keys = Object.keys(caps || {});
+    let prodChanged = false;
+    let lastCompra = +p.compra || 0;
+    let lastVenta = +p.venta || 0;
+    let lastLab = p.lab || null;
+
+    function labUsesFilter(lab) {
+      if (!filterNames.length && !renameFrom) return true; // full sync
+      const names = [];
+      (lab.quim || []).forEach(function (x) { names.push(normInsName(x.prod)); });
+      (lab.imp || []).forEach(function (x) { names.push(normInsName(x.prod)); });
+      if (renameFrom && names.indexOf(normInsName(renameFrom)) >= 0) return true;
+      return filterNames.some(function (n) { return names.indexOf(n) >= 0; });
+    }
+
+    if (keys.length) {
+      const nextCaps = Object.assign({}, caps);
+      keys.forEach(function (k) {
+        const c = caps[k];
+        if (!c || !c.lab) return;
+        if (!labUsesFilter(c.lab)) return;
+        const r = applyInsumoPricesToLab(c.lab, priceMap, renameFrom, renameTo);
+        if (!r) return;
+        // Siempre reescribe compra/venta desde fórmula viva (margen guardado)
+        const same =
+          !r.changed &&
+          Math.abs((+c.compra || 0) - r.costo) < 0.005 &&
+          Math.abs((+c.venta || 0) - r.pvp) < 0.005;
+        if (same) return;
+        nextCaps[k] = { compra: r.costo, venta: r.pvp, lab: r.lab };
+        lastCompra = r.costo;
+        lastVenta = r.pvp;
+        lastLab = r.lab;
+        prodChanged = true;
+      });
+      if (prodChanged) {
+        p.caps = nextCaps;
+        // Precio principal = capacidad del lab actual o la primera
+        const prefer = p.lab && p.lab.ml ? String(Math.round(+p.lab.ml)) : keys.sort(function (a, b) { return +a - +b; })[0];
+        if (prefer && nextCaps[prefer]) {
+          p.compra = nextCaps[prefer].compra;
+          p.venta = nextCaps[prefer].venta;
+          p.lab = nextCaps[prefer].lab;
+        } else {
+          p.compra = lastCompra;
+          p.venta = lastVenta;
+          if (lastLab) p.lab = lastLab;
+        }
+      }
+    } else if (p.lab && (p.lab.quim || p.lab.imp)) {
+      if (!labUsesFilter(p.lab)) return;
+      const r = applyInsumoPricesToLab(p.lab, priceMap, renameFrom, renameTo);
+      if (!r) return;
+      const same =
+        !r.changed &&
+        Math.abs((+p.compra || 0) - r.costo) < 0.005 &&
+        Math.abs((+p.venta || 0) - r.pvp) < 0.005;
+      if (same) return;
+      p.lab = r.lab;
+      p.compra = r.costo;
+      p.venta = r.pvp;
+      prodChanged = true;
+    }
+    if (prodChanged) {
+      products[idx] = p;
+      updated++;
+    }
+  });
+  return updated;
+}
+/** Refresca precios del formulario Lab abierto y del bloque Lab en Stock */
+function refreshOpenLabPricesFromInsumos() {
+  const priceMap = buildInsumoPriceMap();
+  let n = 0;
+  if (typeof labQ !== 'undefined' && Array.isArray(labQ)) {
+    labQ.forEach(function (l) {
+      const hit = priceMap[normInsName(l.prod)];
+      if (hit && Math.abs((+hit.precio || 0) - (+l.precio || 0)) > 0.00001) {
+        l.precio = +hit.precio || 0;
+        n++;
+      }
+    });
+  }
+  if (typeof labI !== 'undefined' && Array.isArray(labI)) {
+    labI.forEach(function (l) {
+      const hit = priceMap[normInsName(l.prod)];
+      if (hit && Math.abs((+hit.precio || 0) - (+l.precio || 0)) > 0.00001) {
+        l.precio = +hit.precio || 0;
+        n++;
+      }
+    });
+  }
+  if (typeof prodLabQ !== 'undefined' && Array.isArray(prodLabQ)) {
+    prodLabQ.forEach(function (l) {
+      const hit = priceMap[normInsName(l.prod)];
+      if (hit && Math.abs((+hit.precio || 0) - (+l.precio || 0)) > 0.00001) {
+        l.precio = +hit.precio || 0;
+        n++;
+      }
+    });
+  }
+  if (typeof prodLabI !== 'undefined' && Array.isArray(prodLabI)) {
+    prodLabI.forEach(function (l) {
+      const hit = priceMap[normInsName(l.prod)];
+      if (hit && Math.abs((+hit.precio || 0) - (+l.precio || 0)) > 0.00001) {
+        l.precio = +hit.precio || 0;
+        n++;
+      }
+    });
+  }
+  try { if (typeof renderLabQuim === 'function') renderLabQuim(); } catch (e) {}
+  try { if (typeof renderLabImp === 'function') renderLabImp(); } catch (e) {}
+  try { if (typeof calcLab === 'function') calcLab(); } catch (e) {}
+  try { if (typeof renderProdLabQuim === 'function') renderProdLabQuim(); } catch (e) {}
+  try { if (typeof renderProdLabImp === 'function') renderProdLabImp(); } catch (e) {}
+  try { if (typeof recalcProdLabCost === 'function') recalcProdLabCost(); } catch (e) {}
+  return n;
+}
+
 async function saveInsumo() {
   const producto = (document.getElementById('insProd').value || '').trim();
   if (!producto) return toast('Nombre requerido');
@@ -10693,12 +10935,27 @@ async function saveInsumo() {
     })
   };
   const idx = insumos.findIndex(x => +x.id === +obj.id);
+  const prevIns = idx >= 0 ? insumos[idx] : null;
+  const oldName = prevIns ? String(prevIns.producto || '') : '';
   if (idx >= 0) insumos[idx] = obj; else insumos.push(obj);
   const savedInsId = obj.id;
+  // Propagar precio (y rename) a perfumes Lab en stock — no toca facturas
+  let nLab = 0;
+  try {
+    nLab = syncLabProductsFromInsumos({
+      names: [obj.producto, oldName].filter(Boolean),
+      renameFrom: (oldName && normInsName(oldName) !== normInsName(obj.producto)) ? oldName : null,
+      renameTo: (oldName && normInsName(oldName) !== normInsName(obj.producto)) ? obj.producto : null
+    });
+  } catch (eSync) { console.warn('syncLabProductsFromInsumos', eSync); }
+  try { refreshOpenLabPricesFromInsumos(); } catch (e2) {}
   closeInsForm();
   await autoSave();
   renderInsumos();
-  toast('Insumo guardado');
+  try { if (nLab) renderProducts(); } catch (e3) {}
+  toast(nLab
+    ? ('Insumo guardado · ' + nLab + ' perfume(s) Lab actualizado(s) en stock')
+    : 'Insumo guardado');
   if (savedInsId) setTimeout(function(){ flashCard('#insList .list-card[data-ins-id="' + savedInsId + '"]'); }, 120);
 }
 async function delInsumo(id) {
@@ -10929,6 +11186,8 @@ async function guardarStockLab() {
   const rawName = (document.getElementById('labNombre').value || '').trim();
   if (!rawName) return toast('Nombre del producto requerido');
   const nombre = basePerfumeName(rawName);
+  // Usar precios vivos de insumos antes de fijar stock
+  try { refreshOpenLabPricesFromInsumos(); } catch (e) {}
   const r = calcLab();
   const ml = parseFloat(document.getElementById('labML').value) || 0;
   if (!getLabCaps().includes(ml)) return toast('Elige una capacidad válida (' + getLabCaps().join(', ') + ' ml)');
