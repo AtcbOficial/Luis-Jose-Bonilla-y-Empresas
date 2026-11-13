@@ -10545,7 +10545,10 @@ function viewInsDetail(id) {
   let html = '';
   const imgSrc = (i.img && String(i.img).indexOf('http') === 0) ? i.img : '';
   if (imgSrc) {
-    html += `<div style="margin-bottom:10px;text-align:center"><img src="${imgSrc}" alt="" style="max-width:100%;max-height:200px;object-fit:contain;border-radius:10px;border:1px solid var(--border);background:#0e151d" onerror="this.style.display='none'"></div>`;
+    // Ficha técnica: ancha al 100% del modal, alta, sin distorsión (object-fit:contain)
+    html += `<div class="ins-ficha-wrap" style="margin:0 0 12px;text-align:center;width:100%;padding:0;background:#0a0e14;border-radius:12px;border:1px solid var(--border);overflow:hidden">` +
+      `<img src="${imgSrc}" alt="Ficha técnica" style="display:block;width:100%;max-width:100%;height:auto;max-height:min(72vh,640px);object-fit:contain;object-position:center;margin:0 auto;background:#0a0e14" onerror="this.parentElement.style.display='none'">` +
+      `</div>`;
     html += `<div class="d-row" style="font-size:11px;word-break:break-all"><strong>Link:</strong> <a href="${imgSrc}" target="_blank" rel="noopener" style="color:var(--accent)">abrir imagen</a></div>`;
   }
   html += `<div class="d-row">🧴 <strong>Nombre:</strong> ${escapeHtml(i.producto || '')}</div>`;
