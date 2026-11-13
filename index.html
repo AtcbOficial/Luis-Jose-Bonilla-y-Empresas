@@ -8410,9 +8410,11 @@ async function thermalBlePrint() {
     await thermalBleEnsure();
     await thermalDelay(100);
 
-    // Límite empírico Phomemo M110: ~1064 líneas OK, ~1203 falla.
-    // Usamos franjas grandes (1000) SOLO si hace falta → mínimo de juntas.
-    const MAX_BAND = 1000;
+    // Límite real Phomemo M110 (Labelife / firmware):
+    //   papel continuo 50×150 mm → imprime; 50×151 mm → no hace nada.
+    // Resolución típica 203 dpi ≈ 8 dots/mm → 150 mm = 1200 líneas máx. por raster.
+    // Por encima de eso partimos en tramos de 1200 (mínimo de juntas).
+    const MAX_BAND = 1200;
     const totalBands = Math.max(1, Math.ceil(heightLines / MAX_BAND));
     setThermalStatus('Imprimiendo… 0% · ' + heightLines + ' líneas' + (totalBands > 1 ? (' · ' + totalBands + ' tramos') : ''));
 
@@ -8609,8 +8611,8 @@ async function thermalUsbPrint() {
     await thermalDelay(40);
     await thermalUsbSend(new Uint8Array([0x1f, 0x11, 0x0b]));
     await thermalDelay(40);
-    // Mismo criterio que BLE: un tramo si cabe; si no, franjas de 1000
-    const USB_MAX = 1000;
+    // Mismo criterio que BLE: máx 150 mm ≈ 1200 líneas por raster (Labelife)
+    const USB_MAX = 1200;
     for (let y0 = 0; y0 < heightLines; y0 += USB_MAX) {
       const hBand = Math.min(USB_MAX, heightLines - y0);
       const slice = data.subarray(y0 * widthBytes, (y0 + hBand) * widthBytes);
