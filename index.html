@@ -1920,22 +1920,22 @@ header #empresaSelect{
         <div class="cont-reg-cajas">
           <div class="section-title" style="font-size:13px;margin-bottom:8px">Cierre de cajas</div>
           <div class="caja-inline-row">
-            <label class="label">Caja electrónica (bancos) <span id="cajaElDays" class="caja-days"></span></label>
+            <label class="label">Caja electrónica (bancos) <span id="cajaElDays" class="caja-days"></span> <span id="cajaElPct" class="hint">→ 0.00%</span></label>
             <input id="cajaElectronica" type="text" inputmode="decimal" placeholder="0,00" data-money="1">
           </div>
           <div class="caja-inline-row">
-            <label class="label">Caja física (efectivo) <span id="cajaFiDays" class="caja-days"></span></label>
+            <label class="label">Caja física (efectivo) <span id="cajaFiDays" class="caja-days"></span> <span id="cajaFiPct" class="hint">→ 0.00%</span></label>
             <input id="cajaFisica" type="text" inputmode="decimal" placeholder="0,00" data-money="1">
           </div>
           <div class="caja-inline-row">
-            <label class="label">Acciones e inversiones <span id="cajaInvDays" class="caja-days"></span></label>
+            <label class="label">Acciones e inversiones <span id="cajaInvDays" class="caja-days"></span> <span id="cajaInvPct" class="hint">→ 0.00%</span></label>
             <input id="cajaInversiones" type="text" inputmode="decimal" placeholder="0,00" data-money="1">
           </div>
         </div>
         <div class="cont-reg-resumen-wrap">
           <div class="caja-resumen">
             <div class="caja-res-item"><div class="label">Total cajas</div><div id="cajaTotal" class="stat balance">$0</div></div>
-            <div class="caja-res-item"><div class="label">Resultado</div><div id="cajaResultado" class="stat balance">$0</div></div>
+            <div class="caja-res-item"><div class="label">Resultado</div><div id="cajaResultado" class="stat balance">$0</div><div id="cajaResultadoPct" class="hint" style="margin-top:2px">→ 0.00%</div></div>
             <div class="caja-res-item"><div class="label">Diferencia vs resultado</div><div id="cajaDiff" class="stat balance">$0</div></div>
           </div>
           <p id="cajaMsg" class="hint" style="margin:8px 0 0;text-align:center"></p>
@@ -1948,9 +1948,9 @@ header #empresaSelect{
       <summary>📊 Análisis del año</summary>
       <div class="body">
         <div class="cont-grid" style="margin-bottom:14px">
-          <div class="card" style="margin:0;padding:10px"><div class="label">Ingresos</div><div id="contIncome" class="stat income">$0</div><div id="contIncomeDetail" class="tot-detail"></div></div>
-          <div class="card" style="margin:0;padding:10px"><div class="label">Egresos</div><div id="contExpense" class="stat expense">$0</div><div id="contExpenseDetail" class="tot-detail"></div></div>
-          <div class="card" style="margin:0;padding:10px"><div class="label">Resultado</div><div id="contBalance" class="stat balance">$0</div><div id="contBalanceDetail" class="tot-detail"></div></div>
+          <div class="card" style="margin:0;padding:10px"><div class="label">Ingresos</div><div id="contIncome" class="stat income">$0</div><div id="contIncomePct" class="hint" style="margin-top:2px">→ 0.00%</div><div id="contIncomeDetail" class="tot-detail"></div></div>
+          <div class="card" style="margin:0;padding:10px"><div class="label">Egresos</div><div id="contExpense" class="stat expense">$0</div><div id="contExpensePct" class="hint" style="margin-top:2px">→ 0.00%</div><div id="contExpenseDetail" class="tot-detail"></div></div>
+          <div class="card" style="margin:0;padding:10px"><div class="label">Resultado</div><div id="contBalance" class="stat balance">$0</div><div id="contBalancePct" class="hint" style="margin-top:2px">→ 0.00%</div><div id="contBalanceDetail" class="tot-detail"></div></div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
           <label class="label" style="margin:0">Por mes · año</label>
@@ -3133,6 +3133,8 @@ function applyEmpresaUI() {
     const pObs = document.getElementById('pObs');
     const stockSearch = document.getElementById('stockSearch');
     if (pFam) pFam.style.display = isPerf ? '' : 'none';
+    const pFicha = document.getElementById('pFichaTecnicaUrl');
+    if (pFicha) pFicha.style.display = isPerf ? '' : 'none';
     if (pObs) pObs.placeholder = isPerf
       ? 'Característica del perfume'
       : 'Observaciones, notas…';
@@ -5736,7 +5738,6 @@ function renderClients() {
           <div class="line">📞 ${escapeHtml(c.telefono || '—')} · Doc: ${escapeHtml(c.documento || '—')}</div>
           <div class="line">📍 ${escapeHtml(c.direccion || '—')}</div>
           ${c.email ? `<div class="line">✉️ ${escapeHtml(c.email)}</div>` : ''}
-          ${c.obs ? `<div class="line" style="white-space:pre-wrap">📝 ${escapeHtml(c.obs)}</div>` : ''}
           <div class="row-actions" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap">
             <button type="button" class="sm warn" onclick="viewCliDetail(${c.id})" title="Ver detalles">👀</button>
             ${wa ? `<a class="sm warn" href="${wa}" target="_blank" rel="noopener" title="WhatsApp">📲</a>` : ''}
@@ -6318,6 +6319,32 @@ fCliente.oninput = () => {
 fCliente.onblur = () => setTimeout(() => cliDrop.classList.remove('open'), 200);
 
 
+
+/** Busca producto de stock por código (normalizado) en la empresa activa */
+function findStockProductByCode(code, empId) {
+  const emp = empId || activeEmpresa;
+  const want = normCodigoId(code);
+  if (!want) return null;
+  const list = products || [];
+  // 1) match exacto normalizado + empresa
+  let p = list.find(x => (x.empresa || EMPRESA_ATCB) === emp && normCodigoId(x.codigo) === want);
+  if (p) return p;
+  // 2) match por dígitos del código (1-164 vs 1-0164)
+  const dig = String(want).replace(/\D/g, '');
+  if (dig) {
+    p = list.find(x => {
+      if ((x.empresa || EMPRESA_ATCB) !== emp) return false;
+      const d = String(normCodigoId(x.codigo) || '').replace(/\D/g, '');
+      return d && d === dig;
+    });
+    if (p) return p;
+  }
+  // 3) match case-insensitive sin normalizar
+  const raw = String(code || '').trim().toLowerCase();
+  p = list.find(x => (x.empresa || EMPRESA_ATCB) === emp && String(x.codigo || '').trim().toLowerCase() === raw);
+  return p || null;
+}
+
 /** Pega masiva: Atcb "1-0001;5" · Perfumes "2-0001;30;5" (una línea por ítem) */
 function parseBulkFactText(text) {
   const raw = String(text || '').replace(/\r/g, '\n').trim();
@@ -6346,10 +6373,7 @@ function parseBulkFactText(text) {
       cant = parts.length > 1 ? (parseFloat(String(parts[1]).replace(',', '.')) || 1) : 1;
     }
     if (!code) { errors.push('L' + (idx+1) + ': sin código'); return; }
-    const p = (products || []).find(x =>
-      (x.empresa || EMPRESA_ATCB) === activeEmpresa &&
-      normCodigoId(x.codigo) === code
-    );
+    const p = findStockProductByCode(code, activeEmpresa);
     if (!p) { errors.push(code + ' no en stock'); return; }
     let name = p.name || code;
     let costo = +p.compra || 0;
@@ -6357,15 +6381,19 @@ function parseBulkFactText(text) {
     if (isPerf) {
       const caps = getProductCaps(p);
       const keys = Object.keys(caps).sort((a,b)=>+a-+b);
-      if (ml == null || !Number.isFinite(ml) || ml <= 0) {
-        if (keys.length === 1) ml = +keys[0];
-        else { errors.push(code + ': indica ml'); return; }
+      if (keys.length) {
+        // Producto Lab: requiere capacidad ml
+        if (ml == null || !Number.isFinite(ml) || ml <= 0) {
+          if (keys.length === 1) ml = +keys[0];
+          else { errors.push(code + ': indica ml (Lab)'); return; }
+        }
+        const c = caps[String(Math.round(ml))] || caps[String(ml)];
+        if (!c) { errors.push(code + ': sin fórmula ' + ml + ' ml'); return; }
+        name = (basePerfumeName(p.name) || p.name) + ' ' + Math.round(ml) + 'ml';
+        costo = +c.compra || 0;
+        precio = +c.venta || 0;
       }
-      const c = caps[String(Math.round(ml))] || caps[String(ml)];
-      if (!c) { errors.push(code + ': sin fórmula ' + ml + ' ml'); return; }
-      name = (basePerfumeName(p.name) || p.name) + ' ' + Math.round(ml) + 'ml';
-      costo = +c.compra || 0;
-      precio = +c.venta || 0;
+      // Sin caps = producto libre (sin Lab): usa compra/venta del producto
     }
     const row = { name, cant, costo, precio, sub: 0, codigo: code };
     row.sub = lineSub(row);
@@ -6977,17 +7005,35 @@ fProdSearch.addEventListener('keydown', (e) => {
 btnAddLine.onclick = () => {
   const rawBulk = fProdSearch.value || '';
   if (applyBulkFactLines(rawBulk)) return;
-  const name = fProdSearch.value.trim();
+  let name = fProdSearch.value.trim();
   if (!name) return toast('Escribe o elige un producto');
   const cant = parseMoney(fCant.value) || 1;
   let costo = parseMoney(document.getElementById('fCosto')?.value);
   let precio = parseMoney(fPrecio.value);
-  const p = products.find(x => (x.name || '').toLowerCase() === name.toLowerCase());
+  // Resolver por nombre exacto (empresa activa) o por código
+  let p = (products || []).find(x =>
+    (x.empresa || EMPRESA_ATCB) === activeEmpresa &&
+    (x.name || '').toLowerCase() === name.toLowerCase()
+  );
+  if (!p) {
+    // nombre base perfume + ml
+    const mMl = name.match(/^(.*?)\s+(\d+)\s*ml$/i);
+    if (mMl) {
+      const base = mMl[1].trim().toLowerCase();
+      p = (products || []).find(x =>
+        (x.empresa || EMPRESA_ATCB) === activeEmpresa &&
+        (basePerfumeName(x.name) || x.name || '').toLowerCase() === base
+      );
+    }
+  }
+  if (!p) p = findStockProductByCode(name, activeEmpresa);
   if (p) {
     if (!document.getElementById('fCosto')?.value) costo = +p.compra || 0;
     if (!fPrecio.value) precio = +p.venta || 0;
+    // Si escribió solo el código, usar nombre del producto
+    if (normCodigoId(name) === normCodigoId(p.codigo)) name = p.name || name;
   }
-  const row = { name, cant, costo: costo || 0, precio: precio || 0, sub: 0 };
+  const row = { name, cant, costo: costo || 0, precio: precio || 0, sub: 0, codigo: p ? (p.codigo || '') : '' };
   row.sub = lineSub(row);
   currentLines.push(row);
   fProdSearch.value = ''; fCant.value = 1;
@@ -9967,6 +10013,21 @@ function updateContCajasUI(resultadoTotal) {
     elRes.textContent = money(resultadoTotal);
     elRes.className = 'stat ' + (resultadoTotal >= 0 ? 'balance' : 'expense');
   }
+  try {
+    const prevC = window._cajaPrevPct || { el: 0, fi: 0, inv: 0, res: 0 };
+    const elv = +contCajas.electronica || 0;
+    const fiv = +contCajas.fisica || 0;
+    const invv = +contCajas.inversiones || 0;
+    const setP = function(id, prevV, curV) {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = typeof fmtPctBadge === 'function' ? fmtPctBadge(prevV, curV) : '→ 0.00%';
+    };
+    setP('cajaElPct', prevC.el, elv);
+    setP('cajaFiPct', prevC.fi, fiv);
+    setP('cajaInvPct', prevC.inv, invv);
+    setP('cajaResultadoPct', prevC.res, resultadoTotal);
+    window._cajaPrevPct = { el: elv, fi: fiv, inv: invv, res: resultadoTotal };
+  } catch (eCajaPct) {}
   elDiff.textContent = money(diff);
   // Diferencia: verde si positiva, rojo si negativa, verde suave si ~0
   if (Math.abs(diff) <= 0.5) {
@@ -10358,6 +10419,17 @@ function refreshContabilidad() {
     elB.textContent = money(b);
     elB.className = 'stat ' + (b >= 0 ? 'balance' : 'expense');
   }
+  try {
+    const prev = window._contPrevPct || { i: 0, e: 0, b: 0 };
+    const setP = function(id, prevV, curV) {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = typeof fmtPctBadge === 'function' ? fmtPctBadge(prevV, curV) : '→ 0.00%';
+    };
+    setP('contIncomePct', prev.i, i);
+    setP('contExpensePct', prev.e, e);
+    setP('contBalancePct', prev.b, b);
+    window._contPrevPct = { i: i, e: e, b: b };
+  } catch (ePct) {}
   try { fillContBreakdownUI('cont', yearData); } catch (err) {}
   syncContCajasInputs();
   updateContCajasUI(allRes);
@@ -11608,6 +11680,20 @@ function ensureFx() {
   });
   return settings.fx;
 }
+
+function fmtPctBadge(prev, cur) {
+  prev = Number(prev) || 0;
+  cur = Number(cur) || 0;
+  var pct = 0, dir = 'same';
+  if (prev > 0) {
+    pct = Math.round(((cur - prev) / prev) * 10000) / 100;
+    dir = cur > prev ? 'up' : (cur < prev ? 'down' : 'same');
+  }
+  var color = pct > 0 ? '#35d07f' : (pct < 0 ? '#ff5c6c' : 'var(--muted)');
+  var arrow = dir === 'up' ? '↑' : (dir === 'down' ? '↓' : '→');
+  return '<span style="font-size:10px;color:'+color+';white-space:nowrap;margin-left:6px">'+arrow+' '+(pct>0?'+':'')+pct.toFixed(2)+'%</span>';
+}
+
 function renderHomeFx() {
   ensureFx();
   const box = document.getElementById('homeFxList');
@@ -11621,7 +11707,8 @@ function renderHomeFx() {
     const pct = Number(r.changePct || 0);
     const color = pct > 0 ? '#35d07f' : (pct < 0 ? '#ff5c6c' : 'var(--muted)');
     const arrow = r.direction === 'up' ? '↑' : (r.direction === 'down' ? '↓' : '→');
-    const movement = r.previousRate > 0 ? '<span style="font-size:10px;color:'+color+';white-space:nowrap">'+arrow+' '+(pct>0?'+':'')+pct.toFixed(2)+'%</span>' : '';
+    // Siempre mostrar indicador (→ 0.00% si no hay cambio o es moneda nueva)
+    const movement = '<span style="font-size:10px;color:'+color+';white-space:nowrap">'+arrow+' '+(pct>0?'+':'')+Number(pct||0).toFixed(2)+'%</span>';
     return '<div class="fx-row"><span class="fx-emoji">' + (r.emoji || '💱') + '</span><span class="fx-code">' +
       escapeHtml(r.code || '') + '</span><span class="fx-name">' + escapeHtml(r.name || '') +
       '</span><span class="fx-rate">' + money(r.rate || 0) + '</span>' + movement + '</div>';
