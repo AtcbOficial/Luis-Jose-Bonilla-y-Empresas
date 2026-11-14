@@ -1650,13 +1650,13 @@ header #empresaSelect{
         <img id="pImgPreview" class="prod-img-preview" alt="Foto producto">
         <div class="prod-img-actions">
           <label class="label">Link imagen del producto</label>
-          <input type="url" id="pImgUrl" placeholder="https://… imagen del producto" autocomplete="off">
-          <label class="label" style="margin-top:6px">Link imagen ficha técnica</label>
-          <input type="url" id="pFichaUrl" placeholder="https://… imagen ficha técnica" autocomplete="off">
+          <input type="url" id="pImgUrl" placeholder="https://… (Drive, OneDrive, web)" autocomplete="off">
           <button type="button" class="sm danger" id="pImgClear">🗑️ Quitar imagen</button>
-          <p class="hint">La ficha técnica no se muestra en stock; se exporta al catálogo para el botón 👀.</p>
+          <p class="hint">Solo URL pública. No se sube archivo (más liviano en Firebase).</p>
         </div>
       </div>
+      <label class="label">https://... imagen ficha técnica</label>
+      <input type="url" id="pFichaTecnicaUrl" placeholder="https://... imagen ficha técnica" autocomplete="off" style="margin-bottom:6px">
       <input id="pFamilia" placeholder="Familia olfativa (amaderado, cítrico, dulce…)" style="margin-bottom:6px" autocomplete="off">
       <textarea id="pObs" placeholder="Observaciones, notas…" style="margin-bottom:6px;min-height:56px"></textarea>
       <div id="prodLabBox" style="display:none;margin:8px 0;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--card2)">
@@ -1728,6 +1728,8 @@ header #empresaSelect{
       <label class="label">Link imagen (https://…)</label>
       <input type="url" id="insImgUrl" placeholder="https://… foto del insumo" style="margin-bottom:4px">
       <p class="hint" style="margin:0 0 6px">Solo URL pública (misma lógica que stock). No se sube archivo.</p>
+      <label class="label">https://... imagen ficha técnica</label>
+      <input type="url" id="insFichaTecnicaUrl" placeholder="https://... imagen ficha técnica" style="margin-bottom:8px">
       <img id="insImgPreview" class="prod-img-preview" alt="preview" style="margin-bottom:8px">
       <div class="grid2" style="margin-bottom:6px">
         <input id="insPrecio" type="number" min="0" step="0.0001" placeholder="Precio base ($/g o $/ud)">
@@ -1807,10 +1809,8 @@ header #empresaSelect{
           <img id="labImgPreview" class="prod-img-preview" alt="Foto producto">
           <div class="prod-img-actions">
             <input type="url" id="labImgUrl" placeholder="https://… imagen del producto" autocomplete="off">
-            <label class="label" style="margin-top:6px">Link imagen ficha técnica</label>
-            <input type="url" id="labFichaUrl" placeholder="https://… imagen ficha técnica" autocomplete="off">
+            <input type="url" id="labFichaTecnicaUrl" placeholder="https://... imagen ficha técnica" autocomplete="off" style="margin-top:6px">
             <button type="button" class="sm danger" id="labImgClear">🗑️ Quitar imagen</button>
-            <p class="hint">La ficha técnica va al catálogo (👀), no a la miniatura de stock.</p>
           </div>
         </div>
         <div class="form-row" style="margin-bottom:10px">
@@ -3693,6 +3693,7 @@ function loadFromObj(obj) {
       obs: p.obs || '',
       codigo: (p.codigo != null ? String(p.codigo) : (p.codeId != null ? String(p.codeId) : '')),
       img: (typeof p.img === 'string' && p.img.indexOf('http') === 0) ? p.img : '',
+      fichaTecnica: normImgUrl(p.fichaTecnica || p.imgFichaTecnica || ''),
       familia: p.familia || p.familiaOlfativa || '',
       obs: p.obs || '',
       empresa: (p.empresa === EMPRESA_PERFUMES || p.empresa === 'perfumes') ? EMPRESA_PERFUMES : EMPRESA_ATCB
@@ -3793,6 +3794,7 @@ function loadFromObj(obj) {
   insumos = (obj.insumos || []).map(i => ({
     codigo: i.codigo != null ? String(i.codigo) : '',
     img: (i.img && String(i.img).indexOf('http') === 0) ? String(i.img) : '',
+    fichaTecnica: normImgUrl(i.fichaTecnica || i.imgFichaTecnica || ''),
     id: +i.id || 0,
     cat: i.cat === 'implemento' ? 'implemento' : 'quimico',
     producto: i.producto || i.name || '',
@@ -5038,14 +5040,11 @@ function exportCatalogSelection() {
       ? (basePerfumeName(p.name) || p.name || '')
       : (p.name || '');
     const img = (typeof p.img === 'string' && (p.img.indexOf('http') === 0 || p.img.indexOf('data:image') === 0)) ? p.img : '';
-    const fichaTecnica = (typeof p.fichaTecnica === 'string' && p.fichaTecnica.indexOf('http') === 0)
-      ? p.fichaTecnica
-      : '';
     items.push({
       codigo,
       nombre: String(nombre || '').trim(),
       img,
-      fichaTecnica,
+      fichaTecnica: normImgUrl(p.fichaTecnica || ''),
       familia: String(p.familia || p.familiaOlfativa || '').trim(),
       obs: String(p.obs || '').trim()
     });
@@ -5129,7 +5128,7 @@ function renderProducts() {
           <div class="line">🏷️ ${escapeHtml(priceTxt)}</div>
           <div class="line">🛒 Vendido: <strong>${vendido}</strong> ud en facturas</div>
           ${(p.familia || p.familiaOlfativa) ? `<div class="line">👃 ${escapeHtml(p.familia || p.familiaOlfativa)}</div>` : ''}
-                    <div class="row-actions" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap">
+          <div class="row-actions" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap">
             <button type="button" class="sm warn" onclick="viewProdDetail(${p.id})" title="Ver detalles">👀</button>
             <button type="button" class="sm success" onclick="showProdQr(${p.id})" title="QR para sticker">📷 QR</button>
             <button type="button" class="sm success" onclick="waProdObs(${p.id})" title="WhatsApp observaciones">📲</button>
@@ -5261,12 +5260,12 @@ async function editProd(id) {
   }
   const pUrl = document.getElementById('pImgUrl');
   if (pUrl) pUrl.value = normImgUrl(p.img || '');
+  const pFichaUrl = document.getElementById('pFichaTecnicaUrl'); if (pFichaUrl) pFichaUrl.value = normImgUrl(p.fichaTecnica || '');
   setProdImgPreview(document.getElementById('pImgPreview'), normImgUrl(p.img || '') || '');
   const pFamEl = document.getElementById('pFamilia');
   if (pFamEl) pFamEl.value = p.familia || p.familiaOlfativa || '';
   const pObsEl = document.getElementById('pObs');
   if (pObsEl) pObsEl.value = p.obs || '';
-  const pFichaEl = document.getElementById('pFichaUrl'); if (pFichaEl) pFichaEl.value = (p.fichaTecnica && String(p.fichaTecnica).indexOf('http')===0) ? p.fichaTecnica : '';
 
   // Perfume con capacidades: editar UNA capacidad (modal si hay varias)
   if (isPerf && capKeys.length > 0) {
@@ -5329,6 +5328,7 @@ btnNewProd.onclick = () => {
     pCod.title = 'Se asigna solo; puedes ajustarlo si hace falta';
   }
   clearProdImgUI('p');
+  const pFichaUrl = document.getElementById('pFichaTecnicaUrl'); if (pFichaUrl) pFichaUrl.value = '';
   const pFamEl = document.getElementById('pFamilia'); if (pFamEl) pFamEl.value = '';
   const pObsEl = document.getElementById('pObs'); if (pObsEl) pObsEl.value = '';
   prodLabQ = []; prodLabI = [];
@@ -5377,6 +5377,7 @@ btnSaveProd.onclick = async () => {
   if (!assertCodigoLibre(codigo, editingProdId, activeEmpresa)) return;
   if (pCodEl) pCodEl.value = codigo;
   const img = getProdImgFromUI('p');
+  const fichaTecnica = normImgUrl((document.getElementById('pFichaTecnicaUrl') || {}).value || '');
   const labBox = document.getElementById('prodLabBox');
   const labOpen = labBox && labBox.style.display !== 'none';
   let lab = null;
@@ -5433,10 +5434,7 @@ btnSaveProd.onclick = async () => {
     prev.familia = (typeof familia !== 'undefined' ? familia : ((document.getElementById('pFamilia') || {}).value || '').trim());
     prev.codigo = codigo;
     prev.img = img || '';
-    {
-      let ft = ((document.getElementById('pFichaUrl') || {}).value || '').trim();
-      if (ft.indexOf('http') === 0) prev.fichaTecnica = ft;
-    }
+    prev.fichaTecnica = fichaTecnica || prev.fichaTecnica || '';
     products[i] = prev;
     const sel = document.getElementById('pLabML');
     if (sel) sel.disabled = false;
@@ -5452,9 +5450,6 @@ btnSaveProd.onclick = async () => {
     name = basePerfumeName(name) || name;
   }
 
-  let fichaTec = ((document.getElementById('pFichaUrl') || {}).value || '').trim();
-  if (fichaTec.indexOf('data:') === 0) fichaTec = '';
-  if (fichaTec && fichaTec.indexOf('http') !== 0) fichaTec = '';
   const data = {
     name,
     compra,
@@ -5465,7 +5460,7 @@ btnSaveProd.onclick = async () => {
     familia: (typeof familia !== 'undefined' ? familia : ((document.getElementById('pFamilia') || {}).value || '').trim()),
     codigo,
     img: img || '',
-    fichaTecnica: fichaTec || '',
+    fichaTecnica: fichaTecnica || (editingProdId ? ((products.find(x => +x.id === +editingProdId) || {}).fichaTecnica || '') : ''),
     empresa: activeEmpresa
   };
   if (lab) data.lab = lab;
@@ -5594,13 +5589,14 @@ function viewProdDetail(id) {
   let html = '';
   const imgSrc = (p.img && (String(p.img).indexOf('http') === 0 || String(p.img).indexOf('data:image') === 0)) ? p.img : '';
   if (imgSrc) {
-    html += `<div style="margin-bottom:10px;text-align:center"><img src="${imgSrc}" alt="" style="max-width:100%;max-height:160px;object-fit:contain;border-radius:10px;border:1px solid var(--border);background:#0e151d" onerror="this.style.display='none'"></div>`;
+    html += `<div style="margin-bottom:10px;text-align:center"><img src="${imgSrc}" alt="" style="max-width:100%;max-height:200px;object-fit:contain;border-radius:10px;border:1px solid var(--border);background:#0e151d" onerror="this.style.display='none'"></div>`;
+    if (String(imgSrc).indexOf('http') === 0) {
+      html += `<div class="d-row" style="font-size:11px;word-break:break-all"><strong>Link:</strong> <a href="${imgSrc}" target="_blank" rel="noopener" style="color:var(--accent)">abrir imagen</a> · <button type="button" class="sm secondary" onclick="copyFichaLink('${imgSrc.replace(/'/g, '&#39;')}')">📋 Copiar link</button></div>`;
+    }
   }
-  const fichaSrc = (p.fichaTecnica && String(p.fichaTecnica).indexOf('http') === 0) ? p.fichaTecnica : '';
+  const fichaSrc = normImgUrl(p.fichaTecnica || '');
   if (fichaSrc) {
-    html += `<div style="margin:0 0 12px;text-align:center;width:100%;background:#0a0e14;border-radius:12px;border:1px solid var(--border);overflow:hidden">` +
-      `<img src="${fichaSrc}" alt="Ficha técnica" style="display:block;width:100%;height:auto;max-height:min(72vh,640px);object-fit:contain;margin:0 auto" onerror="this.parentElement.style.display='none'"></div>`;
-    html += `<div class="d-row" style="font-size:11px;margin-bottom:8px"><button type="button" class="sm warn" onclick="navigator.clipboard.writeText('${fichaSrc.replace(/'/g, "\'")}').then(()=>toast('Link copiado')).catch(()=>toast('No se pudo copiar'))">📋 Copiar link ficha técnica</button></div>`;
+    html += `<div style="margin:10px 0;text-align:center;background:#0a0e14;border:1px solid var(--border);border-radius:12px;padding:6px"><img src="${fichaSrc}" alt="Ficha técnica" style="display:block;width:100%;height:auto;max-height:72vh;object-fit:contain;margin:0 auto" onerror="this.parentElement.style.display='none'"></div><div class="d-row" style="word-break:break-all"><strong>Ficha técnica:</strong> <a href="${fichaSrc}" target="_blank" rel="noopener" style="color:var(--accent)">abrir imagen</a> · <button type="button" class="sm secondary" onclick="copyFichaLink('${fichaSrc.replace(/'/g, '&#39;')}')">📋 Copiar link</button></div>`;
   }
   html += `<div class="d-row">🧴 <strong>Nombre:</strong> ${escapeHtml(base)}</div>`;
   if (p.codigo) html += `<div class="d-row">🪪 <strong>Código id:</strong> ${escapeHtml(p.codigo)}</div>`;
@@ -5740,7 +5736,8 @@ function renderClients() {
           <div class="line">📞 ${escapeHtml(c.telefono || '—')} · Doc: ${escapeHtml(c.documento || '—')}</div>
           <div class="line">📍 ${escapeHtml(c.direccion || '—')}</div>
           ${c.email ? `<div class="line">✉️ ${escapeHtml(c.email)}</div>` : ''}
-                    <div class="row-actions" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap">
+          ${c.obs ? `<div class="line" style="white-space:pre-wrap">📝 ${escapeHtml(c.obs)}</div>` : ''}
+          <div class="row-actions" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap">
             <button type="button" class="sm warn" onclick="viewCliDetail(${c.id})" title="Ver detalles">👀</button>
             ${wa ? `<a class="sm warn" href="${wa}" target="_blank" rel="noopener" title="WhatsApp">📲</a>` : ''}
             <button type="button" class="sm warn" onclick="editCli(${c.id})" class="warn">✏️</button>
@@ -5871,7 +5868,7 @@ function renderProveedores() {
           <div class="line">📍 ${escapeHtml(v.direccion || '—')}</div>
           ${v.email ? `<div class="line">✉️ ${escapeHtml(v.email)}</div>` : ''}
           ${web ? `<div class="line">🔗 <a href="${escapeHtml(web)}" target="_blank" rel="noopener" style="color:var(--accent)">${escapeHtml(v.web)}</a></div>` : ''}
-                    <div class="row-actions" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap">
+          <div class="row-actions" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap">
             <button type="button" class="sm warn" onclick="viewProvDetail(${v.id})" title="Ver detalles">👀</button>
             ${wa ? `<a class="sm warn" href="${wa}" target="_blank" rel="noopener" title="WhatsApp">📲</a>` : ''}
             <button type="button" class="sm warn" onclick="editProv(${v.id})" class="warn">✏️</button>
@@ -6359,29 +6356,16 @@ function parseBulkFactText(text) {
     let precio = +p.venta || 0;
     if (isPerf) {
       const caps = getProductCaps(p);
-      const keys = Object.keys(caps).filter(k => caps[k]).sort((a,b)=>+a-+b);
-      if (keys.length) {
-        if (ml == null || !Number.isFinite(ml) || ml <= 0) {
-          if (keys.length === 1) ml = +keys[0];
-          else { errors.push(code + ': indica ml'); return; }
-        }
-        const c = caps[String(Math.round(ml))] || caps[String(ml)];
-        if (c) {
-          name = (basePerfumeName(p.name) || p.name) + ' ' + Math.round(ml) + 'ml';
-          costo = +c.compra || 0;
-          precio = +c.venta || 0;
-        } else {
-          // sin esa capacidad: usa precio stock
-          if (ml != null && Number.isFinite(ml) && ml > 0)
-            name = (basePerfumeName(p.name) || p.name) + ' ' + Math.round(ml) + 'ml';
-          costo = +p.compra || 0;
-          precio = +p.venta || 0;
-        }
-      } else {
-        // Producto sin fórmula Lab: facturable con compra/venta de stock
-        costo = +p.compra || 0;
-        precio = +p.venta || 0;
+      const keys = Object.keys(caps).sort((a,b)=>+a-+b);
+      if (ml == null || !Number.isFinite(ml) || ml <= 0) {
+        if (keys.length === 1) ml = +keys[0];
+        else { errors.push(code + ': indica ml'); return; }
       }
+      const c = caps[String(Math.round(ml))] || caps[String(ml)];
+      if (!c) { errors.push(code + ': sin fórmula ' + ml + ' ml'); return; }
+      name = (basePerfumeName(p.name) || p.name) + ' ' + Math.round(ml) + 'ml';
+      costo = +c.compra || 0;
+      precio = +c.venta || 0;
     }
     const row = { name, cant, costo, precio, sub: 0, codigo: code };
     row.sub = lineSub(row);
@@ -6465,45 +6449,11 @@ async function addFromQrText(raw) {
     if (ml == null) {
       if (keys.length === 1) ml = +keys[0];
       else if (keys.length > 1) ml = await openCapModal(p);
-      else {
-        // Sin fórmula Lab: facturar con precio de stock
-        let cant0 = 1;
-        if (parts.length >= 2) cant0 = parseFloat(parts[1].replace(',', '.')) || 1;
-        const row0 = {
-          name: p.name || code,
-          cant: cant0,
-          costo: +p.compra || 0,
-          precio: +p.venta || 0,
-          sub: 0,
-          codigo: code
-        };
-        row0.sub = lineSub(row0);
-        currentLines.push(row0);
-        renderLines();
-        toast('➕ ' + row0.name + ' (sin fórmula Lab)');
-        return true;
-      }
+      else { toast(code + ' sin capacidades/fórmula'); return false; }
     }
     if (ml == null) return false;
     const c = caps[String(Math.round(ml))] || caps[String(ml)];
-    if (!c) {
-      // Capacidad pedida sin fórmula: usar precios del producto
-      let cant0 = 1;
-      if (parts.length >= 3) cant0 = parseFloat(parts[2].replace(',', '.')) || 1;
-      const row0 = {
-        name: (basePerfumeName(p.name) || p.name) + ' ' + Math.round(ml) + 'ml',
-        cant: cant0,
-        costo: +p.compra || 0,
-        precio: +p.venta || 0,
-        sub: 0,
-        codigo: code
-      };
-      row0.sub = lineSub(row0);
-      currentLines.push(row0);
-      renderLines();
-      toast('➕ ' + row0.name);
-      return true;
-    }
+    if (!c) { toast(code + ': sin fórmula ' + ml + ' ml'); return false; }
     let cant = 1;
     if (parts.length >= 3) cant = parseFloat(parts[2].replace(',', '.')) || 1;
     const row = {
@@ -6981,7 +6931,7 @@ fProdSearch.oninput = () => {
   drop.classList.add('open');
   drop.querySelectorAll('div').forEach(el => {
     el.onclick = async () => {
-      const p = products.find(x => +x.id === +el.dataset.id);
+      const p = products.find(x => x.id === +el.dataset.id);
       drop.classList.remove('open');
       if (!p) return;
       const caps = getProductCaps(p);
@@ -7032,27 +6982,12 @@ btnAddLine.onclick = () => {
   const cant = parseMoney(fCant.value) || 1;
   let costo = parseMoney(document.getElementById('fCosto')?.value);
   let precio = parseMoney(fPrecio.value);
-  // Coincide nombre exacto o "nombre 60ml" (perfumes con capacidad)
-  const nameLow = name.toLowerCase();
-  const baseLow = basePerfumeName(name).toLowerCase();
-  let p = products.find(x => (x.empresa || EMPRESA_ATCB) === activeEmpresa && (x.name || '').toLowerCase() === nameLow);
-  if (!p) p = products.find(x => (x.empresa || EMPRESA_ATCB) === activeEmpresa && basePerfumeName(x.name).toLowerCase() === baseLow);
-  if (!p) p = products.find(x => (x.name || '').toLowerCase() === nameLow);
+  const p = products.find(x => (x.name || '').toLowerCase() === name.toLowerCase());
   if (p) {
     if (!document.getElementById('fCosto')?.value) costo = +p.compra || 0;
     if (!fPrecio.value) precio = +p.venta || 0;
-    // Si el nombre trae ml y hay caps, usa precio de esa capacidad
-    const mlM = name.match(/(\d+)\s*ml\s*$/i);
-    if (mlM) {
-      const caps = getProductCaps(p);
-      const c = caps[String(+mlM[1])] || caps[mlM[1]];
-      if (c) {
-        if (!document.getElementById('fCosto')?.value) costo = +c.compra || 0;
-        if (!fPrecio.value) precio = +c.venta || 0;
-      }
-    }
   }
-  const row = { name, cant, costo: costo || 0, precio: precio || 0, sub: 0, codigo: p ? (p.codigo || '') : '' };
+  const row = { name, cant, costo: costo || 0, precio: precio || 0, sub: 0 };
   row.sub = lineSub(row);
   currentLines.push(row);
   fProdSearch.value = ''; fCant.value = 1;
@@ -10612,6 +10547,24 @@ function addInsProvOffer() {
   renderInsProvOffers();
 }
 
+
+async function copyFichaLink(url) {
+  const value = String(url || '').trim();
+  if (!value) return toast('No hay enlace para copiar');
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(value);
+    else { const t=document.createElement('textarea'); t.value=value; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+    toast('Link de ficha técnica copiado');
+  } catch (e) { toast('No se pudo copiar el enlace'); }
+}
+function viewLabInsDetail(index, cat) {
+  const row = cat === 'quimico' ? (labQ || [])[index] : (labI || [])[index];
+  if (!row || !String(row.prod || '').trim()) return toast('Primero selecciona un insumo');
+  const found = (insumos || []).find(x => x.cat === cat && normInsName(x.producto) === normInsName(row.prod));
+  if (!found) return toast('No encontré ese insumo en el registro');
+  viewInsDetail(found.id);
+}
+
 function viewInsDetail(id) {
   const i = (insumos || []).find(x => +x.id === +id);
   if (!i) return;
@@ -10623,13 +10576,13 @@ function viewInsDetail(id) {
   const catLabel = i.cat === 'quimico' ? 'Químico (gramos)' : 'Implemento (unidades)';
   if (title) title.textContent = '👀 ' + (i.producto || 'Insumo');
   let html = '';
-  const imgSrc = (i.img && String(i.img).indexOf('http') === 0) ? i.img : '';
+  const imgSrc = normImgUrl(i.fichaTecnica || i.img || '');
   if (imgSrc) {
     // Ficha técnica: ancha al 100% del modal, alta, sin distorsión (object-fit:contain)
     html += `<div class="ins-ficha-wrap" style="margin:0 0 12px;text-align:center;width:100%;padding:0;background:#0a0e14;border-radius:12px;border:1px solid var(--border);overflow:hidden">` +
       `<img src="${imgSrc}" alt="Ficha técnica" style="display:block;width:100%;max-width:100%;height:auto;max-height:min(72vh,640px);object-fit:contain;object-position:center;margin:0 auto;background:#0a0e14" onerror="this.parentElement.style.display='none'">` +
       `</div>`;
-    html += `<div class="d-row" style="font-size:11px;word-break:break-all"><strong>Link:</strong> <a href="${imgSrc}" target="_blank" rel="noopener" style="color:var(--accent)">abrir imagen</a></div>`;
+    html += `<div class="d-row" style="font-size:11px;word-break:break-all"><strong>Link:</strong> <a href="${imgSrc}" target="_blank" rel="noopener" style="color:var(--accent)">abrir imagen</a> · <button type="button" class="sm secondary" onclick="copyFichaLink('${imgSrc.replace(/'/g, '&#39;')}')">📋 Copiar link</button></div>`;
   }
   html += `<div class="d-row">🧴 <strong>Nombre:</strong> ${escapeHtml(i.producto || '')}</div>`;
   if (i.codigo) html += `<div class="d-row">🪪 <strong>Código id:</strong> ${escapeHtml(i.codigo)}</div>`;
@@ -10715,7 +10668,7 @@ function renderInsumos() {
           <div class="line">Precio base: <strong>$ ${formatMoneyInput(i.precio)}</strong> / ${und} · Stock: <strong>${i.stock || 0}</strong></div>
           ${provLines || '<div class="line" style="color:var(--muted)">🏭 Sin proveedores anotados</div>'}
           ${(i.familia || i.familiaOlfativa) ? `<div class="line">👃 ${escapeHtml(i.familia || i.familiaOlfativa)}</div>` : ''}
-                    <div class="row-actions" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap">
+          <div class="row-actions" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap">
             <button type="button" class="sm warn" onclick="viewInsDetail(${i.id})" title="Ver detalles">👀</button>
             <button type="button" class="sm success" onclick="showInsQr(${i.id})" title="QR sticker">📷 QR</button>
             <button type="button" class="sm success" onclick="waInsObs(${i.id})" title="WhatsApp observaciones">📲</button>
@@ -10742,6 +10695,7 @@ function openInsForm(isNew) {
     const ic = document.getElementById('insCodigo');
     if (ic) ic.value = nextInsCodigo('quimico');
     const iu = document.getElementById('insImgUrl'); if (iu) iu.value = '';
+    const ift = document.getElementById('insFichaTecnicaUrl'); if (ift) ift.value = '';
     const ip = document.getElementById('insImgPreview'); if (ip) { ip.src = ''; ip.classList.remove('show'); }
     insProvOffers = [];
     renderInsProvOffers();
@@ -10763,6 +10717,7 @@ function editInsumo(id) {
   const iu = document.getElementById('insImgUrl');
   const imgv = (i.img && String(i.img).indexOf('http') === 0) ? i.img : '';
   if (iu) iu.value = imgv;
+  const ift = document.getElementById('insFichaTecnicaUrl'); if (ift) ift.value = normImgUrl(i.fichaTecnica || '');
   const ip = document.getElementById('insImgPreview');
   if (ip) { if (imgv) { ip.src = imgv; ip.classList.add('show'); } else { ip.src = ''; ip.classList.remove('show'); } }
   insProvOffers = (i.proveedores || []).map(pv => ({ id: +pv.id, nombre: pv.nombre || '', precio: +pv.precio || 0 }));
@@ -11009,6 +10964,7 @@ async function saveInsumo() {
     producto,
     codigo,
     img: img || '',
+    fichaTecnica: normImgUrl((document.getElementById('insFichaTecnicaUrl') || {}).value || ''),
     precio: parseFloat(document.getElementById('insPrecio').value) || 0,
     stock: parseFloat(document.getElementById('insStock').value) || 0,
     obs: ((document.getElementById('insObs') || {}).value || '').trim(),
@@ -11086,7 +11042,8 @@ function renderLabQuim() {
     const gVal = (l.g != null && l.g !== '' && +l.g !== 0) ? l.g : '';
     const pVal = (l.precio != null && l.precio !== '' && +l.precio !== 0) ? l.precio : '';
     return `<div class="line-item" style="grid-template-columns:1fr">
-      <div style="display:grid;grid-template-columns:minmax(0,1fr) 70px 78px;gap:6px;margin-bottom:4px;align-items:start">
+      <div style="display:grid;grid-template-columns:34px minmax(0,1fr) 70px 78px;gap:6px;margin-bottom:4px;align-items:start">
+        <button type="button" class="sm warn" style="padding:8px 9px" onclick="viewLabInsDetail(${i},'quimico')" title="Ver ficha del insumo">👀</button>
         <div class="search-wrap">
           <input value="${escapeHtml(l.prod || '')}" placeholder="🔍 Nombre químico..." autocomplete="off"
             oninput="labQ[${i}].prod=this.value;labInsSearch(${i},'quimico',this.value)"
@@ -11113,7 +11070,8 @@ function renderLabImp() {
     const uVal = (l.u != null && l.u !== '' && +l.u !== 0) ? l.u : '';
     const pVal = (l.precio != null && l.precio !== '' && +l.precio !== 0) ? l.precio : '';
     return `<div class="line-item" style="grid-template-columns:1fr">
-      <div style="display:grid;grid-template-columns:minmax(0,1fr) 70px 78px;gap:6px;margin-bottom:4px;align-items:start">
+      <div style="display:grid;grid-template-columns:34px minmax(0,1fr) 70px 78px;gap:6px;margin-bottom:4px;align-items:start">
+        <button type="button" class="sm warn" style="padding:8px 9px" onclick="viewLabInsDetail(${i},'implemento')" title="Ver ficha del insumo">👀</button>
         <div class="search-wrap">
           <input value="${escapeHtml(l.prod || '')}" placeholder="🔍 Nombre implemento..." autocomplete="off"
             oninput="labI[${i}].prod=this.value;labInsSearch(${i},'implemento',this.value)"
@@ -11282,9 +11240,7 @@ async function guardarStockLab() {
   let codigo = normCodigoId((document.getElementById('labCodigo') || {}).value || '');
   if (!codigo) codigo = nextCodigoId(EMPRESA_PERFUMES);
   const img = getProdImgFromUI('lab');
-  let fichaTec = ((document.getElementById('labFichaUrl') || {}).value || '').trim();
-  if (fichaTec.indexOf('data:') === 0) fichaTec = '';
-  if (fichaTec && fichaTec.indexOf('http') !== 0) fichaTec = '';
+  const fichaTecnica = normImgUrl((document.getElementById('labFichaTecnicaUrl') || {}).value || '');
   const lab = {
     ml,
     margen: r.margen || parseFloat((document.getElementById('labMargen') || {}).value) || 0,
@@ -11308,7 +11264,7 @@ async function guardarStockLab() {
     if (typeof familia !== 'undefined') p.familia = familia;
     p.codigo = codigo;
     p.img = img || p.img || '';
-    if (fichaTec) p.fichaTecnica = fichaTec;
+    p.fichaTecnica = fichaTecnica || p.fichaTecnica || '';
     p.fecha = today();
     toast(nombre + ' · ' + ml + ' ml actualizado en stock');
   } else {
@@ -11325,7 +11281,7 @@ async function guardarStockLab() {
       familia,
       codigo: codigo || '',
       img: img || '',
-      fichaTecnica: fichaTec || '',
+      fichaTecnica: fichaTecnica || '',
       lab,
       caps,
       empresa: EMPRESA_PERFUMES
@@ -11360,7 +11316,6 @@ function clearLab() {
   clearProdImgUI('lab');
   const lf = document.getElementById('labFamilia'); if (lf) lf.value = '';
   const lo = document.getElementById('labObs'); if (lo) lo.value = '';
-  const lf = document.getElementById('labFichaUrl'); if (lf) lf.value = '';
   labQ = [{ prod: '', g: 0, precio: 0 }];
   labI = [{ prod: '', u: 0, precio: 0 }];
   renderLabQuim(); renderLabImp(); calcLab();
