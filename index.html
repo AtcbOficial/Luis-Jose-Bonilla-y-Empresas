@@ -1262,7 +1262,7 @@ header #empresaSelect{
           <div class="total-box fact-total-box">
             <div class="fact-total-row">
               <div>
-                <div class="label">${escapeHtml(pl.Total)}</div>
+                <div class="label" id="fTotalLabel">TOTAL</div>
                 <div class="big" id="fTotal">$0</div>
               </div>
               <div class="fact-total-side">
@@ -3172,6 +3172,13 @@ function applyEmpresaUI() {
   syncFlatSettingsFromEmp();
   try { syncSettingsUI(); } catch (err) {}
   try { updateHeaderSub(); } catch (err) {}
+  try {
+    const tl = document.getElementById('fTotalLabel');
+    if (tl) {
+      const labs = (e.thermalLabels || e.pdfLabels || {});
+      tl.textContent = labs.Total || 'TOTAL';
+    }
+  } catch (eLbl) {}
 }
 
 let products = [];
@@ -6351,7 +6358,8 @@ function parseBulkFactText(text) {
   if (!raw) return null;
   const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
   if (!lines.length) return null;
-  if (!lines.some(l => /[;\t,]/.test(l))) return null;
+  // Solo ; o tab = pegado masivo. La coma NO (nombres como "(revision, diagnostico)...")
+  if (!lines.some(l => /[;\t]/.test(l))) return null;
   const isPerf = activeEmpresa === EMPRESA_PERFUMES;
   const rows = [];
   const errors = [];
@@ -6405,8 +6413,13 @@ function applyBulkFactLines(text) {
   const parsed = parseBulkFactText(text);
   if (!parsed) return false;
   if (!parsed.rows.length) {
-    if (parsed.errors.length) toast(parsed.errors.slice(0, 3).join(' · '));
-    return true;
+    // No es un pegado masivo válido → dejar que Agregar línea use el texto normal
+    if (parsed.errors.length) {
+      // Solo avisar si realmente parecía bulk (código;cant)
+      const looksBulk = /[;\t]/.test(String(text || ''));
+      if (looksBulk) toast(parsed.errors.slice(0, 3).join(' · '));
+    }
+    return false;
   }
   parsed.rows.forEach(r => currentLines.push(r));
   renderLines();
@@ -7011,9 +7024,12 @@ btnAddLine.onclick = () => {
   let costo = parseMoney(document.getElementById('fCosto')?.value);
   let precio = parseMoney(fPrecio.value);
   // Resolver por nombre exacto (empresa activa) o por código
+  const normName = function(s) {
+    return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  };
   let p = (products || []).find(x =>
     (x.empresa || EMPRESA_ATCB) === activeEmpresa &&
-    (x.name || '').toLowerCase() === name.toLowerCase()
+    normName(x.name) === normName(name)
   );
   if (!p) {
     // nombre base perfume + ml
