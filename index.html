@@ -2142,7 +2142,7 @@ header #empresaSelect{
           </div>
           <div class="form-row" style="margin-bottom:8px">
             <label class="label">API de esta moneda (URL JSON)</label>
-            <input id="fxNewApi" type="url" placeholder="https://api.frankfurter.app/latest?from=USD" style="width:100%">
+            <input id="fxNewApi" type="text" placeholder="https://api.frankfurter.app/latest?from=USD" style="width:100%">
           </div>
           <button type="button" id="btnFxAdd" class="success">➕ Agregar moneda</button>
         </div>
@@ -11686,7 +11686,9 @@ function ensureFx() {
   settings.fx.rates.forEach(function (r) {
     if (!r.apiUrl && r.code) {
       var c = String(r.code).toUpperCase();
-      if (c.indexOf('VEN') >= 0 && c.indexOf('P2P') >= 0) r.apiUrl = 'https://ve.dolarapi.com/v1/dolares/paralelo';
+      if (c.indexOf('BTC') >= 0 || c.indexOf('BITCOIN') >= 0)
+        r.apiUrl = 'https://api.coinbase.com/v2/prices/BTC-USD/spot';
+      else if (c.indexOf('VEN') >= 0 && c.indexOf('P2P') >= 0) r.apiUrl = 'https://ve.dolarapi.com/v1/dolares/paralelo';
       else if (c.indexOf('VEN') >= 0 && c.indexOf('EUR') >= 0) r.apiUrl = 'https://bcv.today/api/v1/rate.json';
       else if (c.indexOf('VEN') >= 0) r.apiUrl = 'https://ve.dolarapi.com/v1/dolares/oficial';
       else if (c.indexOf('COL') >= 0 && c.indexOf('P2P') >= 0) r.apiUrl = 'https://open.er-api.com/v6/latest/USD';
@@ -11745,7 +11747,7 @@ function renderFxArchivo() {
       '<button type="button" class="danger sm" onclick="fxDeleteRate(' + i + ')">🗑️</button>' +
       '</div>' +
       '<div><label class="label" style="font-size:11px">API de ' + escapeHtml(r.code || 'moneda') + '</label>' +
-      '<input class="fx-e-api" type="url" value="' + escapeHtml(r.apiUrl || '') + '" placeholder="https://api.frankfurter.app/latest?from=XXX" style="width:100%"></div>' +
+      '<input class="fx-e-api" type="text" value="' + escapeHtml(r.apiUrl || '') + '" placeholder="https://api.frankfurter.app/latest?from=XXX" style="width:100%"></div>' +
       '</div>';
   }).join('') || '<p class="hint">Sin monedas aún</p>';
   try { if (typeof bindAllMoneyInputs === 'function') bindAllMoneyInputs(); } catch (e) {}
@@ -11842,6 +11844,22 @@ function extractRateFromJson(data, code) {
       if (rates.VES != null && +rates.VES > 0) return +rates.VES;
       if (code && rates[code] != null && +rates[code] > 0) return +rates[code];
     }
+    // Crypto comunes
+    // Coinbase: { data: { amount: "95000", base:"BTC", currency:"USD" } }
+    if (data.data && data.data.amount != null && +data.data.amount > 0) return +data.data.amount;
+    if (data.amount != null && +data.amount > 0) return +data.amount;
+    // Binance / genérico: { price: "95000" } o { symbol, price }
+    if (data.price != null && +data.price > 0) return +data.price;
+    // CoinGecko simple: { bitcoin: { usd: 95000 } }
+    if (data.bitcoin) {
+      var b = data.bitcoin;
+      if (typeof b === 'number' && b > 0) return +b;
+      if (b && b.usd != null && +b.usd > 0) return +b.usd;
+      if (b && b.cop != null && +b.cop > 0) return +b.cop;
+    }
+    // Blockchain.info ticker: { USD: { last: 95000, ... } }
+    if (data.USD && data.USD.last != null && +data.USD.last > 0) return +data.USD.last;
+    if (data.USD && data.USD.buy != null && +data.USD.buy > 0) return +data.USD.buy;
   }
   return null;
 }
@@ -11858,11 +11876,23 @@ async function fxFetchOne(index, silent) {
   }
   try {
     if (status) status.textContent = 'Consultando ' + (r.code || '') + '…';
-    const res = await fetch(apiUrl, { cache: 'no-store' });
+    const res = await fetch(apiUrl, { cache: 'no-store', mode: 'cors' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     const val = extractRateFromJson(data, r.code || '');
-    if (val == null || !(val > 0)) throw new Error('JSON sin tasa usable');
+    if (val == null || !(val > 0)) {
+      var hint = '';
+      try {
+        if (data && typeof data === 'object') {
+          if (data.data) hint = ' (tiene data.*)';
+          else if (data.bitcoin) hint = ' (tiene bitcoin.*)';
+          else if (data.USD) hint = ' (tiene USD.*)';
+          else if (data.price) hint = ' (tiene price)';
+          else hint = ' (keys: ' + Object.keys(data).slice(0, 6).join(',') + ')';
+        }
+      } catch (eH) {}
+      throw new Error('JSON sin tasa usable' + hint);
+    }
     const oldRate = Number(r.rate) || 0;
     const newRate = Math.round(val * 100) / 100;
     if (oldRate > 0) {
