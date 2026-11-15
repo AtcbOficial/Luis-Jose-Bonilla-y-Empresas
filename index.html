@@ -59,6 +59,7 @@
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
@@ -1175,9 +1176,9 @@ header #empresaSelect{
       <summary>📊 Análisis del año</summary>
       <div class="body">
         <div class="cont-grid" style="margin-bottom:14px">
-          <div class="card" style="margin:0;padding:10px"><div class="label">Ingresos</div><div id="homeIncome" class="stat income">$ 0,00</div><div id="homeIncomeDetail" class="tot-detail"></div></div>
-          <div class="card" style="margin:0;padding:10px"><div class="label">Egresos</div><div id="homeExpense" class="stat expense">$ 0,00</div><div id="homeExpenseDetail" class="tot-detail"></div></div>
-          <div class="card" style="margin:0;padding:10px"><div class="label">Resultado</div><div id="homeBalance" class="stat balance">$ 0,00</div><div id="homeBalanceDetail" class="tot-detail"></div></div>
+          <div class="card" style="margin:0;padding:10px"><div class="label">Ingresos</div><div id="homeIncome" class="stat income">$ 0,00</div><div id="homeIncomePct" class="hint" style="margin-top:2px">→ 0.00%</div><div id="homeIncomeDetail" class="tot-detail"></div></div>
+          <div class="card" style="margin:0;padding:10px"><div class="label">Egresos</div><div id="homeExpense" class="stat expense">$ 0,00</div><div id="homeExpensePct" class="hint" style="margin-top:2px">→ 0.00%</div><div id="homeExpenseDetail" class="tot-detail"></div></div>
+          <div class="card" style="margin:0;padding:10px"><div class="label">Resultado</div><div id="homeBalance" class="stat balance">$ 0,00</div><div id="homeBalancePct" class="hint" style="margin-top:2px">→ 0.00%</div><div id="homeBalanceDetail" class="tot-detail"></div></div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
           <select id="homeChartMode" style="flex:1;min-width:160px;max-width:280px;padding:6px 8px;font-size:12px">
@@ -1195,9 +1196,9 @@ header #empresaSelect{
       <div class="body">
         
         <div class="cont-grid" style="margin-bottom:10px">
-          <div class="card" style="margin:0;padding:10px"><div class="label">Electrónica</div><div id="homeCajaElec" class="stat" style="font-size:15px">$ 0,00</div></div>
-          <div class="card" style="margin:0;padding:10px"><div class="label">Física</div><div id="homeCajaFis" class="stat" style="font-size:15px">$ 0,00</div></div>
-          <div class="card" style="margin:0;padding:10px"><div class="label">Inversiones</div><div id="homeCajaInv" class="stat" style="font-size:15px">$ 0,00</div></div>
+          <div class="card" style="margin:0;padding:10px"><div class="label">Electrónica</div><div id="homeCajaElec" class="stat" style="font-size:15px">$ 0,00</div><div id="homeCajaElecPct" class="hint" style="margin-top:2px">→ 0.00%</div></div>
+          <div class="card" style="margin:0;padding:10px"><div class="label">Física</div><div id="homeCajaFis" class="stat" style="font-size:15px">$ 0,00</div><div id="homeCajaFisPct" class="hint" style="margin-top:2px">→ 0.00%</div></div>
+          <div class="card" style="margin:0;padding:10px"><div class="label">Inversiones</div><div id="homeCajaInv" class="stat" style="font-size:15px">$ 0,00</div><div id="homeCajaInvPct" class="hint" style="margin-top:2px">→ 0.00%</div></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:center;margin-bottom:10px">
           <div><div class="label">Total cajas</div><div id="homeCajaTot" class="stat balance" style="font-size:16px">$ 0,00</div></div>
@@ -1649,13 +1650,10 @@ header #empresaSelect{
       <div class="prod-img-box">
         <img id="pImgPreview" class="prod-img-preview" alt="Foto producto">
         <div class="prod-img-actions">
-          <label class="label">Link imagen del producto</label>
-          <input type="url" id="pImgUrl" placeholder="https://… (Drive, OneDrive, web)" autocomplete="off">
+          <input type="url" id="pImgUrl" placeholder="https://… imagen del producto" autocomplete="off">
           <button type="button" class="sm danger" id="pImgClear">🗑️ Quitar imagen</button>
-          <p class="hint">Solo URL pública. No se sube archivo (más liviano en Firebase).</p>
         </div>
       </div>
-      <label class="label">https://... imagen ficha técnica</label>
       <input type="url" id="pFichaTecnicaUrl" placeholder="https://... imagen ficha técnica" autocomplete="off" style="margin-bottom:6px">
       <input id="pFamilia" placeholder="Familia olfativa (amaderado, cítrico, dulce…)" style="margin-bottom:6px" autocomplete="off">
       <textarea id="pObs" placeholder="Observaciones, notas…" style="margin-bottom:6px;min-height:56px"></textarea>
@@ -1725,10 +1723,7 @@ header #empresaSelect{
       <input id="insProd" placeholder="Nombre del producto" style="margin-bottom:6px">
       <input id="insCodigo" placeholder="Auto: iq-0001 / ii-0001 (editable)" style="margin-bottom:6px;text-transform:uppercase" autocomplete="off">
       <p class="hint" style="margin:0 0 6px">Químico <code>iq-0001</code> · Implemento <code>ii-0001</code></p>
-      <label class="label">Link imagen (https://…)</label>
-      <input type="url" id="insImgUrl" placeholder="https://… foto del insumo" style="margin-bottom:4px">
-      <p class="hint" style="margin:0 0 6px">Solo URL pública (misma lógica que stock). No se sube archivo.</p>
-      <label class="label">https://... imagen ficha técnica</label>
+      <input type="url" id="insImgUrl" placeholder="https://… imagen del insumo" style="margin-bottom:4px">
       <input type="url" id="insFichaTecnicaUrl" placeholder="https://... imagen ficha técnica" style="margin-bottom:8px">
       <img id="insImgPreview" class="prod-img-preview" alt="preview" style="margin-bottom:8px">
       <div class="grid2" style="margin-bottom:6px">
@@ -1747,7 +1742,6 @@ header #empresaSelect{
           <input id="insProvPrecio" type="number" min="0" step="0.0001" placeholder="Precio de ese proveedor">
         </div>
         <button type="button" class="sm success" id="btnAddInsProv" style="width:100%;margin-top:6px">➕ Agregar proveedor</button>
-        <p class="hint" style="margin:6px 0 0">Proveedores de la empresa activa (pestaña Proveed.). Puedes comparar precios.</p>
       </div>
 
     </div>
@@ -4275,6 +4269,11 @@ function renderHomeContabilidad() {
     elB.className = 'stat ' + (b >= 0 ? 'balance' : 'expense');
   }
   try { fillContBreakdownUI('home', yearData); } catch (err) {}
+  try {
+    setPctEl('homeIncomePct', 'contI', i);
+    setPctEl('homeExpensePct', 'contE', e);
+    setPctEl('homeBalancePct', 'contB', b);
+  } catch (eH) {}
   // Cajas resumen — diferencia vs resultado ACUMULADO
   const ce = parseMoney(typeof contCajas !== 'undefined' && contCajas.electronica) || 0;
   const cf = parseMoney(typeof contCajas !== 'undefined' && contCajas.fisica) || 0;
@@ -4292,6 +4291,11 @@ function renderHomeContabilidad() {
   set('homeCajaInv', ci, 'stat');
   set('homeCajaTot', tot, 'stat balance');
   set('homeCajaRes', allRes, 'stat ' + (allRes >= 0 ? 'balance' : 'expense'));
+  try {
+    setPctEl('homeCajaElecPct', 'cajaEl', ce);
+    setPctEl('homeCajaFisPct', 'cajaFi', cf);
+    setPctEl('homeCajaInvPct', 'cajaInv', ci);
+  } catch (eHC) {}
   // Diferencia: verde si ≥0 (o ~0), rojo solo si negativa
   let diffCls = 'stat income';
   if (Math.abs(diff) > 0.5 && diff < 0) diffCls = 'stat expense';
@@ -4497,59 +4501,51 @@ function renderStats() {
 
 /* Mensaje WhatsApp para motivar a aceptar cotización */
 function motivarCotiz(id) {
-  const inv = getInv(id);
-  if (!inv) return;
-  const e = empCfg(inv.empresa || activeEmpresa);
-  const items = (inv.items || []).map(it => `• ${it.cant} × ${it.name}`).join('\n');
-  let tpl = e.waMotivar || DEFAULT_WA_MOTIVAR;
-  const map = {
-    '{empresa}': e.name || 'Mi empresa',
-    '{cliente}': inv.cliente || '',
-    '{numero}': String(inv.numero || ''),
-    '{fecha}': fmtDate(inv.fecha),
-    '{items}': items,
-    '{total}': money(inv.total),
-    '{obs}': inv.obs ? 'Notas: ' + inv.obs + '\n' : '',
-    '{tel}': e.tel || ''
-  };
-  Object.keys(map).forEach(k => { tpl = tpl.split(k).join(map[k]); });
-  const phone = (inv.telefono || '').replace(/\D/g, '');
-  const url = phone
-    ? `https://wa.me/57${phone.replace(/^57/, '')}?text=${encodeURIComponent(tpl)}`
-    : `https://wa.me/?text=${encodeURIComponent(tpl)}`;
-  window.open(url, '_blank');
+  shareInvoiceSmart(id, function (inv) {
+    const e = empCfg(inv.empresa || activeEmpresa);
+    const items = (inv.items || []).map(function (it) { return '• ' + it.cant + ' × ' + it.name; }).join('\n');
+    let tpl = e.waMotivar || DEFAULT_WA_MOTIVAR;
+    const map = {
+      '{empresa}': e.name || 'Mi empresa',
+      '{cliente}': inv.cliente || '',
+      '{numero}': String(inv.numero || ''),
+      '{fecha}': fmtDate(inv.fecha),
+      '{items}': items,
+      '{total}': money(inv.total),
+      '{obs}': inv.obs ? 'Notas: ' + inv.obs + '\n' : '',
+      '{tel}': e.tel || ''
+    };
+    Object.keys(map).forEach(function (k) { tpl = tpl.split(k).join(map[k]); });
+    return tpl;
+  });
 }
 
 /* ---------- CxC WhatsApp ---------- */
 function sendCxc(id) {
-  const inv = getInv(id);
-  if (!inv) return;
-  const dias = daysAgo(inv.fecha);
-  const abonado = totalAbonado(inv);
-  const saldo = saldoPendiente(inv);
-  const abonosTxt = (inv.abonos || []).length
-    ? (inv.abonos || []).map(a =>
-        `• ${fmtDate(a.fecha)} · ${money(a.monto)}${a.nota ? ' (' + a.nota + ')' : ''}`
-      ).join('\n')
-    : '• Sin abonos';
-  const eCxc = empCfg(inv.empresa || activeEmpresa);
-  let tpl = eCxc.waCxc || DEFAULT_WA_CXC;
-  const map = {
-    '{empresa}': eCxc.name || 'Mi empresa',
-    '{cliente}': inv.cliente || '',
-    '{dias}': String(dias),
-    '{total}': money(inv.total),
-    '{abonos}': abonosTxt,
-    '{abonado}': money(abonado),
-    '{saldo}': money(saldo),
-    '{bancos}': eCxc.banks || DEFAULT_BANKS
-  };
-  Object.keys(map).forEach(k => { tpl = tpl.split(k).join(map[k]); });
-  const phone = (inv.telefono || '').replace(/\D/g, '');
-  const url = phone
-    ? `https://wa.me/57${phone.replace(/^57/, '')}?text=${encodeURIComponent(tpl)}`
-    : `https://wa.me/?text=${encodeURIComponent(tpl)}`;
-  window.open(url, '_blank');
+  shareInvoiceSmart(id, function (inv) {
+    const dias = daysAgo(inv.fecha);
+    const abonado = totalAbonado(inv);
+    const saldo = saldoPendiente(inv);
+    const abonosTxt = (inv.abonos || []).length
+      ? (inv.abonos || []).map(function (a) {
+          return '• ' + fmtDate(a.fecha) + ' · ' + money(a.monto) + (a.nota ? ' (' + a.nota + ')' : '');
+        }).join('\n')
+      : '• Sin abonos';
+    const eCxc = empCfg(inv.empresa || activeEmpresa);
+    let tpl = eCxc.waCxc || DEFAULT_WA_CXC;
+    const map = {
+      '{empresa}': eCxc.name || 'Mi empresa',
+      '{cliente}': inv.cliente || '',
+      '{dias}': String(dias),
+      '{total}': money(inv.total),
+      '{abonos}': abonosTxt,
+      '{abonado}': money(abonado),
+      '{saldo}': money(saldo),
+      '{bancos}': eCxc.banks || DEFAULT_BANKS
+    };
+    Object.keys(map).forEach(function (k) { tpl = tpl.split(k).join(map[k]); });
+    return tpl;
+  });
 }
 
 /* ---------- STOCK ---------- */
@@ -5150,15 +5146,33 @@ function renderProducts() {
     : '<div class="empty">Sin productos</div>';
 }
 function waProdObs(id) {
-  const p = products.find(x => x.id === id);
-  if (!p) return;
-  const obs = (p.obs || '').trim();
-  if (!obs) return toast('Sin observaciones para enviar');
-  const name = (activeEmpresa === EMPRESA_PERFUMES)
-    ? (basePerfumeName(p.name) || p.name)
-    : (p.name || '');
-  const text = encodeURIComponent('*' + name + '*\n\n' + obs);
-  window.open('https://wa.me/?text=' + text, '_blank');
+  (async function () {
+    const p = products.find(function (x) { return x.id === id; });
+    if (!p) return;
+    const name = (activeEmpresa === EMPRESA_PERFUMES)
+      ? (basePerfumeName(p.name) || p.name)
+      : (p.name || '');
+    const obs = (p.obs || '').trim();
+    const fam = (p.familia || p.familiaOlfativa || '').trim();
+    const cod = (p.codigo || '').trim();
+    let text = '*' + name + '*';
+    if (cod) text += '\n🪪 ' + cod;
+    if (fam) text += '\n👃 ' + fam;
+    if (obs) text += '\n\n' + obs;
+    const files = [];
+    const img = normImgUrl(p.img || '');
+    const ficha = normImgUrl(p.fichaTecnica || '');
+    if (img) {
+      const f = await urlToShareFile(img, (cod || 'prod') + '.jpg');
+      if (f) files.push(f);
+    }
+    if (ficha && ficha !== img) {
+      const f2 = await urlToShareFile(ficha, (cod || 'prod') + '-ficha.jpg');
+      if (f2) files.push(f2);
+    }
+    if (!files.length && !obs) return toast('Sin imagen ni observaciones para enviar');
+    await shareWithFiles(name || 'Producto', text, files, '');
+  })().catch(function (e) { console.warn(e); toast('No se pudo compartir'); });
 }
 /** Abre laboratorio para crear una capacidad faltante del perfume (nombre + obs). */
 function startLabNewCap(id) {
@@ -8777,53 +8791,151 @@ function waText(inv) {
   if (inv.tipo === 'cobrada') tpl = paidWaHeader(inv) + tpl;
   return tpl;
 }
-function waInv(id) {
-  const inv = getInv(id); if (!inv) return;
-  if (inv.isProyecto) {
-    const tipo = inv.tipo === 'cotizacion' ? 'Cotización / En aprobación (proyecto)'
-      : inv.tipo === 'cobrada' ? 'Proyecto finalizado'
-      : 'Proyecto en ejecución';
-    const items = (inv.items || []).map(it => `-> ${it.cant} - ${it.name}`).join('\n')
-      || Object.entries(inv.lines || {}).filter(([,d]) => d && (d.cant || d.precio))
-           .map(([k,d]) => `-> ${d.cant||0} ${d.und||''} ${d.desc||k}`).join('\n');
-    const hasAbonos = (inv.abonos || []).length > 0;
-    let abonosBlock = '';
-    if (hasAbonos) {
-      abonosBlock = '\nAbonos:\n' + (inv.abonos || []).map(a =>
-        `• ${fmtDate(a.fecha)} · ${money(a.monto)}${a.nota ? ' · ' + a.nota : ''}`
-      ).join('\n');
-      abonosBlock += `\nAbonado: ${money(totalAbonado(inv))}\nSaldo: ${money(saldoPendiente(inv))}\n`;
+
+/* ========== Compartir: texto + PDF/imagenes (Web Share Level 2) ========== */
+function downloadBlobFile(blob, filename) {
+  try {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename || 'archivo';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { try { URL.revokeObjectURL(a.href); a.remove(); } catch (e) {} }, 1500);
+  } catch (e) { console.warn(e); }
+}
+async function urlToShareFile(url, filename) {
+  if (!url) return null;
+  try {
+    const res = await fetch(url, { mode: 'cors', cache: 'no-store' });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    if (!blob || !blob.size) return null;
+    let name = filename || 'imagen.jpg';
+    const t = blob.type || '';
+    if (!/\.(png|jpe?g|webp|gif)$/i.test(name)) {
+      if (t.indexOf('png') >= 0) name = name.replace(/\.\w+$/, '') + '.png';
+      else if (t.indexOf('webp') >= 0) name = name.replace(/\.\w+$/, '') + '.webp';
+      else name = name.replace(/\.\w+$/, '') + '.jpg';
     }
-    const eProy = empCfg(EMPRESA_ATCB);
-    let tpl = eProy.waProy || DEFAULT_WA_PROY;
-    const map = {
-      '{tipo}': tipo,
-      '{numero}': String(inv.numero || ''),
-      '{fecha}': fmtDate(inv.fecha),
-      '{cliente}': inv.cliente || '',
-      '{doc}': inv.documento ? 'Doc: ' + inv.documento : '',
-      '{proyecto}': inv.proyecto || '',
-      '{items}': items,
-      '{total}': money(inv.total),
-      '{obs}': inv.obs ? 'Notas: ' + inv.obs : '',
-      '{abonos}': abonosBlock,
-      '{abonado}': money(totalAbonado(inv)),
-      '{saldo}': money(saldoPendiente(inv)),
-      '{empresa}': eProy.name || '',
-      '{tel}': eProy.tel || '',
-      '{social}': eProy.social || ''
-    };
-    Object.keys(map).forEach(k => { tpl = tpl.split(k).join(map[k]); });
-    if (inv.tipo === 'cobrada') tpl = paidWaHeader(inv) + tpl;
-    const text = encodeURIComponent(tpl);
-    const phone = (inv.telefono || '').replace(/\D/g, '');
-    window.open(phone ? `https://wa.me/57${phone.replace(/^57/, '')}?text=${text}` : `https://wa.me/?text=${text}`, '_blank');
-    return;
+    return new File([blob], name, { type: t || 'image/jpeg' });
+  } catch (e) { return null; }
+}
+async function invToPdfFile(inv) {
+  if (!inv) return null;
+  if (typeof html2pdf === 'undefined') return null;
+  const area = document.createElement('div');
+  area.style.cssText = 'position:fixed;left:-9999px;top:0;width:210mm;background:#fff;color:#000;';
+  try {
+    area.innerHTML = inv.isProyecto ? buildProyPrintHtml(inv) : buildPrintHtml(inv);
+  } catch (e) {
+    console.warn(e);
+    return null;
   }
-  const text = encodeURIComponent(waText(inv));
-  const phone = (inv.telefono || '').replace(/\D/g, '');
-  const url = phone ? `https://wa.me/57${phone.replace(/^57/, '')}?text=${text}` : `https://wa.me/?text=${text}`;
+  document.body.appendChild(area);
+  try {
+    const fname = (typeof pdfFileName === 'function' ? pdfFileName(inv) : ('factura-' + (inv.numero || inv.id))) + '.pdf';
+    const opt = {
+      margin: [8, 8, 8, 8],
+      filename: fname,
+      image: { type: 'jpeg', quality: 0.95 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    const blob = await html2pdf().set(opt).from(area).outputPdf('blob');
+    return new File([blob], fname, { type: 'application/pdf' });
+  } catch (e) {
+    console.warn('PDF share', e);
+    return null;
+  } finally {
+    try { area.remove(); } catch (e2) {}
+  }
+}
+function openWaText(text, phone) {
+  const t = encodeURIComponent(text || '');
+  const ph = String(phone || '').replace(/\D/g, '');
+  const url = ph
+    ? ('https://wa.me/57' + ph.replace(/^57/, '') + '?text=' + t)
+    : ('https://wa.me/?text=' + t);
   window.open(url, '_blank');
+}
+async function shareWithFiles(title, text, files, phone) {
+  const list = (files || []).filter(Boolean);
+  // 1) Web Share con archivos
+  try {
+    if (list.length && navigator.canShare && navigator.canShare({ files: list })) {
+      await navigator.share({ title: title || 'Compartir', text: text || '', files: list });
+      return 'shared-files';
+    }
+  } catch (e) {
+    if (e && e.name === 'AbortError') return 'abort';
+  }
+  // 2) Web Share solo texto
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: title || 'Compartir', text: text || '' });
+      list.forEach(function (f) { downloadBlobFile(f, f.name); });
+      if (list.length) toast('Archivo descargado · adjúntalo en el chat');
+      return 'shared-text';
+    }
+  } catch (e2) {
+    if (e2 && e2.name === 'AbortError') return 'abort';
+  }
+  // 3) Fallback: descargar + WhatsApp texto
+  list.forEach(function (f) { downloadBlobFile(f, f.name); });
+  openWaText(text || '', phone);
+  if (list.length) toast('Archivo descargado · se abrió WhatsApp con el mensaje');
+  return 'fallback';
+}
+async function shareInvoiceSmart(id, textBuilder) {
+  const inv = getInv(id);
+  if (!inv) return toast('No encontrada');
+  const text = typeof textBuilder === 'function' ? textBuilder(inv) : String(textBuilder || '');
+  const phone = (inv.telefono || '').replace(/\D/g, '');
+  toast('Preparando PDF…');
+  let file = null;
+  try { file = await invToPdfFile(inv); } catch (e) { file = null; }
+  await shareWithFiles(
+    (inv.cliente || 'Factura') + ' · ' + (inv.numero || ''),
+    text,
+    file ? [file] : [],
+    phone
+  );
+}
+
+
+function waInv(id) {
+  shareInvoiceSmart(id, function (inv) {
+    if (inv.isProyecto) {
+      const tipo = inv.tipo === 'cotizacion' ? 'Cotización / En aprobación (proyecto)'
+        : inv.tipo === 'cobrada' ? 'Proyecto finalizado'
+        : 'Proyecto en ejecución';
+      const items = (inv.items || []).map(it => '-> ' + it.cant + ' - ' + it.name).join('\n')
+        || Object.entries(inv.lines || {}).filter(function (pair) { var d = pair[1]; return d && (d.cant || d.precio); })
+             .map(function (pair) { var k = pair[0], d = pair[1]; return '-> ' + (d.cant||0) + ' ' + (d.und||'') + ' ' + (d.desc||k); }).join('\n');
+      var hasAbonos = (inv.abonos || []).length > 0;
+      var abonosBlock = '';
+      if (hasAbonos) {
+        abonosBlock = '\nAbonos:\n' + (inv.abonos || []).map(function (a) {
+          return '• ' + fmtDate(a.fecha) + ' · ' + money(a.monto) + (a.nota ? ' · ' + a.nota : '');
+        }).join('\n');
+        abonosBlock += '\nAbonado: ' + money(totalAbonado(inv)) + '\nSaldo: ' + money(saldoPendiente(inv)) + '\n';
+      }
+      const eProy = empCfg(EMPRESA_ATCB);
+      let tpl = eProy.waProy || DEFAULT_WA_PROY;
+      const map = {
+        '{tipo}': tipo, '{numero}': String(inv.numero || ''), '{fecha}': fmtDate(inv.fecha),
+        '{cliente}': inv.cliente || '', '{doc}': inv.documento ? 'Doc: ' + inv.documento : '',
+        '{proyecto}': inv.proyecto || '', '{items}': items, '{total}': money(inv.total),
+        '{obs}': inv.obs ? 'Notas: ' + inv.obs : '', '{abonos}': abonosBlock,
+        '{abonado}': money(totalAbonado(inv)), '{saldo}': money(saldoPendiente(inv)),
+        '{empresa}': eProy.name || '', '{tel}': eProy.tel || '', '{social}': eProy.social || ''
+      };
+      Object.keys(map).forEach(function (k) { tpl = tpl.split(k).join(map[k]); });
+      if (inv.tipo === 'cobrada') tpl = paidWaHeader(inv) + tpl;
+      return tpl;
+    }
+    return waText(inv);
+  });
 }
 if (typeof btnWaFact !== 'undefined' && btnWaFact) {
   btnWaFact.onclick = () => {
@@ -10006,6 +10118,19 @@ function readContCajasFromInputs(changedId) {
     contCajas.inversiones = v;
   }
   try { updateCajaDaysUI(); } catch (e) {}
+  try { updateContCajasUI(); } catch (e2) {}
+  try { renderHomeContabilidad(); } catch (e3) {}
+  try {
+    clearTimeout(window._cajaPctCommitT);
+    window._cajaPctCommitT = setTimeout(function () {
+      commitPctSnap({
+        cajaEl: +contCajas.electronica || 0,
+        cajaFi: +contCajas.fisica || 0,
+        cajaInv: +contCajas.inversiones || 0,
+        cajaRes: (typeof contTotals === 'function' ? contTotals(contMovimientos)[2] : 0)
+      });
+    }, 2500);
+  } catch (e4) {}
 }
 function contCajasSum() {
   return (+contCajas.electronica || 0) + (+contCajas.fisica || 0) + (+contCajas.inversiones || 0);
@@ -10030,19 +10155,17 @@ function updateContCajasUI(resultadoTotal) {
     elRes.className = 'stat ' + (resultadoTotal >= 0 ? 'balance' : 'expense');
   }
   try {
-    const prevC = window._cajaPrevPct || { el: 0, fi: 0, inv: 0, res: 0 };
     const elv = +contCajas.electronica || 0;
     const fiv = +contCajas.fisica || 0;
     const invv = +contCajas.inversiones || 0;
-    const setP = function(id, prevV, curV) {
-      const el = document.getElementById(id);
-      if (el) el.innerHTML = typeof fmtPctBadge === 'function' ? fmtPctBadge(prevV, curV) : '→ 0.00%';
-    };
-    setP('cajaElPct', prevC.el, elv);
-    setP('cajaFiPct', prevC.fi, fiv);
-    setP('cajaInvPct', prevC.inv, invv);
-    setP('cajaResultadoPct', prevC.res, resultadoTotal);
-    window._cajaPrevPct = { el: elv, fi: fiv, inv: invv, res: resultadoTotal };
+    setPctEl('cajaElPct', 'cajaEl', elv);
+    setPctEl('cajaFiPct', 'cajaFi', fiv);
+    setPctEl('cajaInvPct', 'cajaInv', invv);
+    setPctEl('cajaResultadoPct', 'cajaRes', resultadoTotal);
+    const snap = ensurePctSnap();
+    if (snap.cajaEl == null && snap.cajaFi == null && snap.cajaInv == null) {
+      commitPctSnap({ cajaEl: elv, cajaFi: fiv, cajaInv: invv, cajaRes: resultadoTotal });
+    }
   } catch (eCajaPct) {}
   elDiff.textContent = money(diff);
   // Diferencia: verde si positiva, rojo si negativa, verde suave si ~0
@@ -10064,6 +10187,7 @@ function renderContMonths() {
   const labels = [], inc = [], exp = [];
   const atcbI = [], perfI = [], manI = [];
   let html = '<div class="monthrow head"><span>Mes</span><span>Ingresos</span><span>Egresos</span><span>Resultado</span></div>';
+  let prevB = null;
   for (let n = 0; n < 12; n++) {
     const d = new Date(y, n, 1);
     const k = y + '-' + String(n + 1).padStart(2, '0');
@@ -10073,7 +10197,14 @@ function renderContMonths() {
     const name = d.toLocaleDateString('es-CO', { month: 'short' });
     labels.push(name); inc.push(i); exp.push(e);
     atcbI.push(br.inc.atcb); perfI.push(br.inc.perfumes); manI.push(br.inc.manual);
-    html += `<div class="monthrow"><span>${name}</span><span class="income">${money(i)}</span><span class="expense">${money(e)}</span><span class="${b < 0 ? 'expense' : 'balance'}">${money(b)}</span></div>`;
+    var badge = '';
+    if (prevB != null && (i || e || b || prevB)) {
+      badge = typeof fmtPctBadge === 'function' ? fmtPctBadge(prevB, b) : '';
+    } else {
+      badge = '<span style="font-size:10px;color:var(--muted);margin-left:6px">→ 0.00%</span>';
+    }
+    prevB = b;
+    html += `<div class="monthrow"><span>${name}</span><span class="income">${money(i)}</span><span class="expense">${money(e)}</span><span class="${b < 0 ? 'expense' : 'balance'}">${money(b)}${badge}</span></div>`;
   }
   const el = document.getElementById('contMonths');
   if (el) el.innerHTML = html;
@@ -10436,15 +10567,13 @@ function refreshContabilidad() {
     elB.className = 'stat ' + (b >= 0 ? 'balance' : 'expense');
   }
   try {
-    const prev = window._contPrevPct || { i: 0, e: 0, b: 0 };
-    const setP = function(id, prevV, curV) {
-      const el = document.getElementById(id);
-      if (el) el.innerHTML = typeof fmtPctBadge === 'function' ? fmtPctBadge(prevV, curV) : '→ 0.00%';
-    };
-    setP('contIncomePct', prev.i, i);
-    setP('contExpensePct', prev.e, e);
-    setP('contBalancePct', prev.b, b);
-    window._contPrevPct = { i: i, e: e, b: b };
+    setPctEl('contIncomePct', 'contI', i);
+    setPctEl('contExpensePct', 'contE', e);
+    setPctEl('contBalancePct', 'contB', b);
+    const snap = ensurePctSnap();
+    if (snap.contI == null && snap.contE == null && snap.contB == null) {
+      commitPctSnap({ contI: i, contE: e, contB: b });
+    }
   } catch (ePct) {}
   try { fillContBreakdownUI('cont', yearData); } catch (err) {}
   syncContCajasInputs();
@@ -10698,14 +10827,31 @@ function viewInsDetail(id) {
   modal.classList.add('open');
 }
 function waInsObs(id) {
-  const i = (insumos || []).find(x => +x.id === +id);
-  if (!i) return;
-  const obs = (i.obs || '').trim();
-  if (!obs) return toast('Sin observaciones para enviar');
-  const und = i.cat === 'quimico' ? 'g' : 'ud';
-  const name = i.producto || 'Insumo';
-  const text = encodeURIComponent('*' + name + '* (' + und + ')\nPrecio base: $ ' + formatMoneyInput(i.precio) + ' / ' + und + '\n\n' + obs);
-  window.open('https://wa.me/?text=' + text, '_blank');
+  (async function () {
+    const i = (insumos || []).find(function (x) { return x.id === id; });
+    if (!i) return;
+    const name = i.producto || i.name || 'Insumo';
+    const obs = (i.obs || i.observaciones || '').trim();
+    const fam = (i.familia || i.familiaOlfativa || '').trim();
+    const cod = (i.codigo || i.codigoId || '').trim();
+    let text = '*' + name + '*';
+    if (cod) text += '\n🪪 ' + cod;
+    if (fam) text += '\n👃 ' + fam;
+    if (obs) text += '\n\n' + obs;
+    const files = [];
+    const img = normImgUrl(i.img || i.link || i.imagen || '');
+    const ficha = normImgUrl(i.fichaTecnica || i.ficha || '');
+    if (img) {
+      const f = await urlToShareFile(img, (cod || 'insumo') + '.jpg');
+      if (f) files.push(f);
+    }
+    if (ficha && ficha !== img) {
+      const f2 = await urlToShareFile(ficha, (cod || 'insumo') + '-ficha.jpg');
+      if (f2) files.push(f2);
+    }
+    if (!files.length && !obs) return toast('Sin imagen ni observaciones para enviar');
+    await shareWithFiles(name, text, files, '');
+  })().catch(function (e) { console.warn(e); toast('No se pudo compartir'); });
 }
 
 function renderInsumos() {
@@ -11699,6 +11845,27 @@ function ensureFx() {
   return settings.fx;
 }
 
+
+function ensurePctSnap() {
+  if (!settings.pctSnap || typeof settings.pctSnap !== 'object') settings.pctSnap = {};
+  return settings.pctSnap;
+}
+/** Muestra badge vs snapshot guardado (no reinicia al renderizar). */
+function setPctEl(id, snapKey, cur) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const snap = ensurePctSnap();
+  const prev = Number(snap[snapKey]);
+  const base = isFinite(prev) ? prev : 0;
+  el.innerHTML = typeof fmtPctBadge === 'function' ? fmtPctBadge(base, cur) : '→ 0.00%';
+}
+/** Actualiza baseline persistente (llamar tras guardar datos reales). */
+function commitPctSnap(partial) {
+  const snap = ensurePctSnap();
+  Object.keys(partial || {}).forEach(function (k) { snap[k] = Number(partial[k]) || 0; });
+  try { autoSave(); } catch (e) {}
+}
+
 function fmtPctBadge(prev, cur) {
   prev = Number(prev) || 0;
   cur = Number(cur) || 0;
@@ -11757,14 +11924,19 @@ function fxCollectEditList() {
   const rows = document.querySelectorAll('#fxEditList .fx-edit-row');
   const out = [];
   rows.forEach(function (row, i) {
+    const prev = settings.fx.rates[i] || {};
     out.push({
-      ...(settings.fx.rates[i] || {}),
-      id: (settings.fx.rates[i] && settings.fx.rates[i].id) || (Date.now() + i),
+      ...prev,
+      id: prev.id || (Date.now() + i),
       emoji: (row.querySelector('.fx-e-emoji') || {}).value || '💱',
       code: ((row.querySelector('.fx-e-code') || {}).value || '').trim().toUpperCase(),
       name: ((row.querySelector('.fx-e-name') || {}).value || '').trim(),
       rate: parseMoney((row.querySelector('.fx-e-rate') || {}).value),
-      apiUrl: ((row.querySelector('.fx-e-api') || {}).value || '').trim()
+      apiUrl: ((row.querySelector('.fx-e-api') || {}).value || '').trim(),
+      // Persistir indicadores entre sesiones
+      previousRate: Number(prev.previousRate) || 0,
+      changePct: Number(prev.changePct) || 0,
+      direction: prev.direction || 'same'
     });
   });
   settings.fx.rates = out.filter(function (r) { return r.code; });
