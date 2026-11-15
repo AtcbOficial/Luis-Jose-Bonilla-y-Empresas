@@ -59,7 +59,6 @@
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
@@ -1650,7 +1649,7 @@ header #empresaSelect{
       <div class="prod-img-box">
         <img id="pImgPreview" class="prod-img-preview" alt="Foto producto">
         <div class="prod-img-actions">
-          <input type="url" id="pImgUrl" placeholder="https://… imagen del producto" autocomplete="off">
+          <input type="url" id="pImgUrl" placeholder="https://… (Drive, OneDrive, web)" autocomplete="off">
           <button type="button" class="sm danger" id="pImgClear">🗑️ Quitar imagen</button>
         </div>
       </div>
@@ -1723,7 +1722,7 @@ header #empresaSelect{
       <input id="insProd" placeholder="Nombre del producto" style="margin-bottom:6px">
       <input id="insCodigo" placeholder="Auto: iq-0001 / ii-0001 (editable)" style="margin-bottom:6px;text-transform:uppercase" autocomplete="off">
       <p class="hint" style="margin:0 0 6px">Químico <code>iq-0001</code> · Implemento <code>ii-0001</code></p>
-      <input type="url" id="insImgUrl" placeholder="https://… imagen del insumo" style="margin-bottom:4px">
+      <input type="url" id="insImgUrl" placeholder="https://… foto del insumo" style="margin-bottom:4px">
       <input type="url" id="insFichaTecnicaUrl" placeholder="https://... imagen ficha técnica" style="margin-bottom:8px">
       <img id="insImgPreview" class="prod-img-preview" alt="preview" style="margin-bottom:8px">
       <div class="grid2" style="margin-bottom:6px">
@@ -4269,11 +4268,6 @@ function renderHomeContabilidad() {
     elB.className = 'stat ' + (b >= 0 ? 'balance' : 'expense');
   }
   try { fillContBreakdownUI('home', yearData); } catch (err) {}
-  try {
-    setPctEl('homeIncomePct', 'contI', i);
-    setPctEl('homeExpensePct', 'contE', e);
-    setPctEl('homeBalancePct', 'contB', b);
-  } catch (eH) {}
   // Cajas resumen — diferencia vs resultado ACUMULADO
   const ce = parseMoney(typeof contCajas !== 'undefined' && contCajas.electronica) || 0;
   const cf = parseMoney(typeof contCajas !== 'undefined' && contCajas.fisica) || 0;
@@ -4291,11 +4285,6 @@ function renderHomeContabilidad() {
   set('homeCajaInv', ci, 'stat');
   set('homeCajaTot', tot, 'stat balance');
   set('homeCajaRes', allRes, 'stat ' + (allRes >= 0 ? 'balance' : 'expense'));
-  try {
-    setPctEl('homeCajaElecPct', 'cajaEl', ce);
-    setPctEl('homeCajaFisPct', 'cajaFi', cf);
-    setPctEl('homeCajaInvPct', 'cajaInv', ci);
-  } catch (eHC) {}
   // Diferencia: verde si ≥0 (o ~0), rojo solo si negativa
   let diffCls = 'stat income';
   if (Math.abs(diff) > 0.5 && diff < 0) diffCls = 'stat expense';
@@ -4501,51 +4490,59 @@ function renderStats() {
 
 /* Mensaje WhatsApp para motivar a aceptar cotización */
 function motivarCotiz(id) {
-  shareInvoiceSmart(id, function (inv) {
-    const e = empCfg(inv.empresa || activeEmpresa);
-    const items = (inv.items || []).map(function (it) { return '• ' + it.cant + ' × ' + it.name; }).join('\n');
-    let tpl = e.waMotivar || DEFAULT_WA_MOTIVAR;
-    const map = {
-      '{empresa}': e.name || 'Mi empresa',
-      '{cliente}': inv.cliente || '',
-      '{numero}': String(inv.numero || ''),
-      '{fecha}': fmtDate(inv.fecha),
-      '{items}': items,
-      '{total}': money(inv.total),
-      '{obs}': inv.obs ? 'Notas: ' + inv.obs + '\n' : '',
-      '{tel}': e.tel || ''
-    };
-    Object.keys(map).forEach(function (k) { tpl = tpl.split(k).join(map[k]); });
-    return tpl;
-  });
+  const inv = getInv(id);
+  if (!inv) return;
+  const e = empCfg(inv.empresa || activeEmpresa);
+  const items = (inv.items || []).map(it => `• ${it.cant} × ${it.name}`).join('\n');
+  let tpl = e.waMotivar || DEFAULT_WA_MOTIVAR;
+  const map = {
+    '{empresa}': e.name || 'Mi empresa',
+    '{cliente}': inv.cliente || '',
+    '{numero}': String(inv.numero || ''),
+    '{fecha}': fmtDate(inv.fecha),
+    '{items}': items,
+    '{total}': money(inv.total),
+    '{obs}': inv.obs ? 'Notas: ' + inv.obs + '\n' : '',
+    '{tel}': e.tel || ''
+  };
+  Object.keys(map).forEach(k => { tpl = tpl.split(k).join(map[k]); });
+  const phone = (inv.telefono || '').replace(/\D/g, '');
+  const url = phone
+    ? `https://wa.me/57${phone.replace(/^57/, '')}?text=${encodeURIComponent(tpl)}`
+    : `https://wa.me/?text=${encodeURIComponent(tpl)}`;
+  window.open(url, '_blank');
 }
 
 /* ---------- CxC WhatsApp ---------- */
 function sendCxc(id) {
-  shareInvoiceSmart(id, function (inv) {
-    const dias = daysAgo(inv.fecha);
-    const abonado = totalAbonado(inv);
-    const saldo = saldoPendiente(inv);
-    const abonosTxt = (inv.abonos || []).length
-      ? (inv.abonos || []).map(function (a) {
-          return '• ' + fmtDate(a.fecha) + ' · ' + money(a.monto) + (a.nota ? ' (' + a.nota + ')' : '');
-        }).join('\n')
-      : '• Sin abonos';
-    const eCxc = empCfg(inv.empresa || activeEmpresa);
-    let tpl = eCxc.waCxc || DEFAULT_WA_CXC;
-    const map = {
-      '{empresa}': eCxc.name || 'Mi empresa',
-      '{cliente}': inv.cliente || '',
-      '{dias}': String(dias),
-      '{total}': money(inv.total),
-      '{abonos}': abonosTxt,
-      '{abonado}': money(abonado),
-      '{saldo}': money(saldo),
-      '{bancos}': eCxc.banks || DEFAULT_BANKS
-    };
-    Object.keys(map).forEach(function (k) { tpl = tpl.split(k).join(map[k]); });
-    return tpl;
-  });
+  const inv = getInv(id);
+  if (!inv) return;
+  const dias = daysAgo(inv.fecha);
+  const abonado = totalAbonado(inv);
+  const saldo = saldoPendiente(inv);
+  const abonosTxt = (inv.abonos || []).length
+    ? (inv.abonos || []).map(a =>
+        `• ${fmtDate(a.fecha)} · ${money(a.monto)}${a.nota ? ' (' + a.nota + ')' : ''}`
+      ).join('\n')
+    : '• Sin abonos';
+  const eCxc = empCfg(inv.empresa || activeEmpresa);
+  let tpl = eCxc.waCxc || DEFAULT_WA_CXC;
+  const map = {
+    '{empresa}': eCxc.name || 'Mi empresa',
+    '{cliente}': inv.cliente || '',
+    '{dias}': String(dias),
+    '{total}': money(inv.total),
+    '{abonos}': abonosTxt,
+    '{abonado}': money(abonado),
+    '{saldo}': money(saldo),
+    '{bancos}': eCxc.banks || DEFAULT_BANKS
+  };
+  Object.keys(map).forEach(k => { tpl = tpl.split(k).join(map[k]); });
+  const phone = (inv.telefono || '').replace(/\D/g, '');
+  const url = phone
+    ? `https://wa.me/57${phone.replace(/^57/, '')}?text=${encodeURIComponent(tpl)}`
+    : `https://wa.me/?text=${encodeURIComponent(tpl)}`;
+  window.open(url, '_blank');
 }
 
 /* ---------- STOCK ---------- */
@@ -5146,35 +5143,26 @@ function renderProducts() {
     : '<div class="empty">Sin productos</div>';
 }
 function waProdObs(id) {
-  (async function () {
-    const p = products.find(function (x) { return x.id === id; });
-    if (!p) return;
-    const name = (activeEmpresa === EMPRESA_PERFUMES)
-      ? (basePerfumeName(p.name) || p.name)
-      : (p.name || '');
-    const obs = (p.obs || '').trim();
-    const fam = (p.familia || p.familiaOlfativa || '').trim();
-    const cod = (p.codigo || '').trim();
-    let text = '*' + name + '*';
-    if (cod) text += '\n🪪 ' + cod;
-    if (fam) text += '\n👃 ' + fam;
-    if (obs) text += '\n\n' + obs;
-    const files = [];
-    const img = normImgUrl(p.img || '');
-    const ficha = normImgUrl(p.fichaTecnica || '');
-    if (img) {
-      const f = await urlToShareFile(img, (cod || 'prod') + '.jpg');
-      if (f) files.push(f);
-    }
-    if (ficha && ficha !== img) {
-      const f2 = await urlToShareFile(ficha, (cod || 'prod') + '-ficha.jpg');
-      if (f2) files.push(f2);
-    }
-    if (!files.length && !obs) return toast('Sin imagen ni observaciones para enviar');
-    await shareWithFiles(name || 'Producto', text, files, '');
-  })().catch(function (e) { console.warn(e); toast('No se pudo compartir'); });
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  const obs = (p.obs || '').trim();
+  const name = (activeEmpresa === EMPRESA_PERFUMES)
+    ? (basePerfumeName(p.name) || p.name)
+    : (p.name || '');
+  const cod = (p.codigo || '').trim();
+  const lines = ['*' + (name || 'Producto') + '*'];
+  if (cod) lines.push('🪪 ' + cod);
+  if (p.venta != null) lines.push('Venta: ' + money(+p.venta || 0));
+  if (obs) lines.push('', obs);
+  const text = lines.join('\n');
+  const urls = [];
+  const img = normImgUrl(p.img || '');
+  const ficha = normImgUrl(p.fichaTecnica || '');
+  if (img) urls.push(img);
+  if (ficha && ficha !== img) urls.push(ficha);
+  if (!obs && !urls.length) return toast('Sin observaciones ni imágenes para enviar');
+  shareTextAndImages(name || 'Producto', text, urls);
 }
-/** Abre laboratorio para crear una capacidad faltante del perfume (nombre + obs). */
 function startLabNewCap(id) {
   const p = products.find(x => x.id === id);
   if (!p) return;
@@ -8791,151 +8779,53 @@ function waText(inv) {
   if (inv.tipo === 'cobrada') tpl = paidWaHeader(inv) + tpl;
   return tpl;
 }
-
-/* ========== Compartir: texto + PDF/imagenes (Web Share Level 2) ========== */
-function downloadBlobFile(blob, filename) {
-  try {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = filename || 'archivo';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(function () { try { URL.revokeObjectURL(a.href); a.remove(); } catch (e) {} }, 1500);
-  } catch (e) { console.warn(e); }
-}
-async function urlToShareFile(url, filename) {
-  if (!url) return null;
-  try {
-    const res = await fetch(url, { mode: 'cors', cache: 'no-store' });
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    if (!blob || !blob.size) return null;
-    let name = filename || 'imagen.jpg';
-    const t = blob.type || '';
-    if (!/\.(png|jpe?g|webp|gif)$/i.test(name)) {
-      if (t.indexOf('png') >= 0) name = name.replace(/\.\w+$/, '') + '.png';
-      else if (t.indexOf('webp') >= 0) name = name.replace(/\.\w+$/, '') + '.webp';
-      else name = name.replace(/\.\w+$/, '') + '.jpg';
-    }
-    return new File([blob], name, { type: t || 'image/jpeg' });
-  } catch (e) { return null; }
-}
-async function invToPdfFile(inv) {
-  if (!inv) return null;
-  if (typeof html2pdf === 'undefined') return null;
-  const area = document.createElement('div');
-  area.style.cssText = 'position:fixed;left:-9999px;top:0;width:210mm;background:#fff;color:#000;';
-  try {
-    area.innerHTML = inv.isProyecto ? buildProyPrintHtml(inv) : buildPrintHtml(inv);
-  } catch (e) {
-    console.warn(e);
-    return null;
-  }
-  document.body.appendChild(area);
-  try {
-    const fname = (typeof pdfFileName === 'function' ? pdfFileName(inv) : ('factura-' + (inv.numero || inv.id))) + '.pdf';
-    const opt = {
-      margin: [8, 8, 8, 8],
-      filename: fname,
-      image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: { scale: 2, useCORS: true, logging: false },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-    const blob = await html2pdf().set(opt).from(area).outputPdf('blob');
-    return new File([blob], fname, { type: 'application/pdf' });
-  } catch (e) {
-    console.warn('PDF share', e);
-    return null;
-  } finally {
-    try { area.remove(); } catch (e2) {}
-  }
-}
-function openWaText(text, phone) {
-  const t = encodeURIComponent(text || '');
-  const ph = String(phone || '').replace(/\D/g, '');
-  const url = ph
-    ? ('https://wa.me/57' + ph.replace(/^57/, '') + '?text=' + t)
-    : ('https://wa.me/?text=' + t);
-  window.open(url, '_blank');
-}
-async function shareWithFiles(title, text, files, phone) {
-  const list = (files || []).filter(Boolean);
-  // 1) Web Share con archivos
-  try {
-    if (list.length && navigator.canShare && navigator.canShare({ files: list })) {
-      await navigator.share({ title: title || 'Compartir', text: text || '', files: list });
-      return 'shared-files';
-    }
-  } catch (e) {
-    if (e && e.name === 'AbortError') return 'abort';
-  }
-  // 2) Web Share solo texto
-  try {
-    if (navigator.share) {
-      await navigator.share({ title: title || 'Compartir', text: text || '' });
-      list.forEach(function (f) { downloadBlobFile(f, f.name); });
-      if (list.length) toast('Archivo descargado · adjúntalo en el chat');
-      return 'shared-text';
-    }
-  } catch (e2) {
-    if (e2 && e2.name === 'AbortError') return 'abort';
-  }
-  // 3) Fallback: descargar + WhatsApp texto
-  list.forEach(function (f) { downloadBlobFile(f, f.name); });
-  openWaText(text || '', phone);
-  if (list.length) toast('Archivo descargado · se abrió WhatsApp con el mensaje');
-  return 'fallback';
-}
-async function shareInvoiceSmart(id, textBuilder) {
-  const inv = getInv(id);
-  if (!inv) return toast('No encontrada');
-  const text = typeof textBuilder === 'function' ? textBuilder(inv) : String(textBuilder || '');
-  const phone = (inv.telefono || '').replace(/\D/g, '');
-  toast('Preparando PDF…');
-  let file = null;
-  try { file = await invToPdfFile(inv); } catch (e) { file = null; }
-  await shareWithFiles(
-    (inv.cliente || 'Factura') + ' · ' + (inv.numero || ''),
-    text,
-    file ? [file] : [],
-    phone
-  );
-}
-
-
 function waInv(id) {
-  shareInvoiceSmart(id, function (inv) {
-    if (inv.isProyecto) {
-      const tipo = inv.tipo === 'cotizacion' ? 'Cotización / En aprobación (proyecto)'
-        : inv.tipo === 'cobrada' ? 'Proyecto finalizado'
-        : 'Proyecto en ejecución';
-      const items = (inv.items || []).map(it => '-> ' + it.cant + ' - ' + it.name).join('\n')
-        || Object.entries(inv.lines || {}).filter(function (pair) { var d = pair[1]; return d && (d.cant || d.precio); })
-             .map(function (pair) { var k = pair[0], d = pair[1]; return '-> ' + (d.cant||0) + ' ' + (d.und||'') + ' ' + (d.desc||k); }).join('\n');
-      var hasAbonos = (inv.abonos || []).length > 0;
-      var abonosBlock = '';
-      if (hasAbonos) {
-        abonosBlock = '\nAbonos:\n' + (inv.abonos || []).map(function (a) {
-          return '• ' + fmtDate(a.fecha) + ' · ' + money(a.monto) + (a.nota ? ' · ' + a.nota : '');
-        }).join('\n');
-        abonosBlock += '\nAbonado: ' + money(totalAbonado(inv)) + '\nSaldo: ' + money(saldoPendiente(inv)) + '\n';
-      }
-      const eProy = empCfg(EMPRESA_ATCB);
-      let tpl = eProy.waProy || DEFAULT_WA_PROY;
-      const map = {
-        '{tipo}': tipo, '{numero}': String(inv.numero || ''), '{fecha}': fmtDate(inv.fecha),
-        '{cliente}': inv.cliente || '', '{doc}': inv.documento ? 'Doc: ' + inv.documento : '',
-        '{proyecto}': inv.proyecto || '', '{items}': items, '{total}': money(inv.total),
-        '{obs}': inv.obs ? 'Notas: ' + inv.obs : '', '{abonos}': abonosBlock,
-        '{abonado}': money(totalAbonado(inv)), '{saldo}': money(saldoPendiente(inv)),
-        '{empresa}': eProy.name || '', '{tel}': eProy.tel || '', '{social}': eProy.social || ''
-      };
-      Object.keys(map).forEach(function (k) { tpl = tpl.split(k).join(map[k]); });
-      if (inv.tipo === 'cobrada') tpl = paidWaHeader(inv) + tpl;
-      return tpl;
+  const inv = getInv(id); if (!inv) return;
+  if (inv.isProyecto) {
+    const tipo = inv.tipo === 'cotizacion' ? 'Cotización / En aprobación (proyecto)'
+      : inv.tipo === 'cobrada' ? 'Proyecto finalizado'
+      : 'Proyecto en ejecución';
+    const items = (inv.items || []).map(it => `-> ${it.cant} - ${it.name}`).join('\n')
+      || Object.entries(inv.lines || {}).filter(([,d]) => d && (d.cant || d.precio))
+           .map(([k,d]) => `-> ${d.cant||0} ${d.und||''} ${d.desc||k}`).join('\n');
+    const hasAbonos = (inv.abonos || []).length > 0;
+    let abonosBlock = '';
+    if (hasAbonos) {
+      abonosBlock = '\nAbonos:\n' + (inv.abonos || []).map(a =>
+        `• ${fmtDate(a.fecha)} · ${money(a.monto)}${a.nota ? ' · ' + a.nota : ''}`
+      ).join('\n');
+      abonosBlock += `\nAbonado: ${money(totalAbonado(inv))}\nSaldo: ${money(saldoPendiente(inv))}\n`;
     }
-    return waText(inv);
-  });
+    const eProy = empCfg(EMPRESA_ATCB);
+    let tpl = eProy.waProy || DEFAULT_WA_PROY;
+    const map = {
+      '{tipo}': tipo,
+      '{numero}': String(inv.numero || ''),
+      '{fecha}': fmtDate(inv.fecha),
+      '{cliente}': inv.cliente || '',
+      '{doc}': inv.documento ? 'Doc: ' + inv.documento : '',
+      '{proyecto}': inv.proyecto || '',
+      '{items}': items,
+      '{total}': money(inv.total),
+      '{obs}': inv.obs ? 'Notas: ' + inv.obs : '',
+      '{abonos}': abonosBlock,
+      '{abonado}': money(totalAbonado(inv)),
+      '{saldo}': money(saldoPendiente(inv)),
+      '{empresa}': eProy.name || '',
+      '{tel}': eProy.tel || '',
+      '{social}': eProy.social || ''
+    };
+    Object.keys(map).forEach(k => { tpl = tpl.split(k).join(map[k]); });
+    if (inv.tipo === 'cobrada') tpl = paidWaHeader(inv) + tpl;
+    const text = encodeURIComponent(tpl);
+    const phone = (inv.telefono || '').replace(/\D/g, '');
+    window.open(phone ? `https://wa.me/57${phone.replace(/^57/, '')}?text=${text}` : `https://wa.me/?text=${text}`, '_blank');
+    return;
+  }
+  const text = encodeURIComponent(waText(inv));
+  const phone = (inv.telefono || '').replace(/\D/g, '');
+  const url = phone ? `https://wa.me/57${phone.replace(/^57/, '')}?text=${text}` : `https://wa.me/?text=${text}`;
+  window.open(url, '_blank');
 }
 if (typeof btnWaFact !== 'undefined' && btnWaFact) {
   btnWaFact.onclick = () => {
@@ -10118,19 +10008,6 @@ function readContCajasFromInputs(changedId) {
     contCajas.inversiones = v;
   }
   try { updateCajaDaysUI(); } catch (e) {}
-  try { updateContCajasUI(); } catch (e2) {}
-  try { renderHomeContabilidad(); } catch (e3) {}
-  try {
-    clearTimeout(window._cajaPctCommitT);
-    window._cajaPctCommitT = setTimeout(function () {
-      commitPctSnap({
-        cajaEl: +contCajas.electronica || 0,
-        cajaFi: +contCajas.fisica || 0,
-        cajaInv: +contCajas.inversiones || 0,
-        cajaRes: (typeof contTotals === 'function' ? contTotals(contMovimientos)[2] : 0)
-      });
-    }, 2500);
-  } catch (e4) {}
 }
 function contCajasSum() {
   return (+contCajas.electronica || 0) + (+contCajas.fisica || 0) + (+contCajas.inversiones || 0);
@@ -10158,14 +10035,13 @@ function updateContCajasUI(resultadoTotal) {
     const elv = +contCajas.electronica || 0;
     const fiv = +contCajas.fisica || 0;
     const invv = +contCajas.inversiones || 0;
-    setPctEl('cajaElPct', 'cajaEl', elv);
-    setPctEl('cajaFiPct', 'cajaFi', fiv);
-    setPctEl('cajaInvPct', 'cajaInv', invv);
-    setPctEl('cajaResultadoPct', 'cajaRes', resultadoTotal);
-    const snap = ensurePctSnap();
-    if (snap.cajaEl == null && snap.cajaFi == null && snap.cajaInv == null) {
-      commitPctSnap({ cajaEl: elv, cajaFi: fiv, cajaInv: invv, cajaRes: resultadoTotal });
-    }
+    setPctEl('cajaElPct', 'caja', 'el', elv);
+    setPctEl('cajaFiPct', 'caja', 'fi', fiv);
+    setPctEl('cajaInvPct', 'caja', 'inv', invv);
+    setPctEl('cajaResultadoPct', 'caja', 'res', resultadoTotal);
+    setPctEl('homeCajaElecPct', 'caja', 'el', elv);
+    setPctEl('homeCajaFisPct', 'caja', 'fi', fiv);
+    setPctEl('homeCajaInvPct', 'caja', 'inv', invv);
   } catch (eCajaPct) {}
   elDiff.textContent = money(diff);
   // Diferencia: verde si positiva, rojo si negativa, verde suave si ~0
@@ -10183,11 +10059,15 @@ function updateContCajasUI(resultadoTotal) {
   }
 }
 function renderContMonths() {
-  const y = new Date().getFullYear();
+  const ySel = document.getElementById('contYearSelect');
+  let y = new Date().getFullYear();
+  try {
+    if (contViewYear && contViewYear !== 'current') y = +contViewYear;
+    else if (ySel && ySel.value && ySel.value !== 'current') y = +ySel.value;
+  } catch (eY) {}
   const labels = [], inc = [], exp = [];
   const atcbI = [], perfI = [], manI = [];
   let html = '<div class="monthrow head"><span>Mes</span><span>Ingresos</span><span>Egresos</span><span>Resultado</span></div>';
-  let prevB = null;
   for (let n = 0; n < 12; n++) {
     const d = new Date(y, n, 1);
     const k = y + '-' + String(n + 1).padStart(2, '0');
@@ -10197,14 +10077,10 @@ function renderContMonths() {
     const name = d.toLocaleDateString('es-CO', { month: 'short' });
     labels.push(name); inc.push(i); exp.push(e);
     atcbI.push(br.inc.atcb); perfI.push(br.inc.perfumes); manI.push(br.inc.manual);
-    var badge = '';
-    if (prevB != null && (i || e || b || prevB)) {
-      badge = typeof fmtPctBadge === 'function' ? fmtPctBadge(prevB, b) : '';
-    } else {
-      badge = '<span style="font-size:10px;color:var(--muted);margin-left:6px">→ 0.00%</span>';
-    }
-    prevB = b;
-    html += `<div class="monthrow"><span>${name}</span><span class="income">${money(i)}</span><span class="expense">${money(e)}</span><span class="${b < 0 ? 'expense' : 'balance'}">${money(b)}${badge}</span></div>`;
+    const bi = pctBadgePersist('months', k + ':i', i);
+    const be = pctBadgePersist('months', k + ':e', e);
+    const bb = pctBadgePersist('months', k + ':b', b);
+    html += `<div class="monthrow"><span>${name}</span><span class="income">${money(i)}<br>${bi}</span><span class="expense">${money(e)}<br>${be}</span><span class="${b < 0 ? 'expense' : 'balance'}">${money(b)}<br>${bb}</span></div>`;
   }
   const el = document.getElementById('contMonths');
   if (el) el.innerHTML = html;
@@ -10567,13 +10443,12 @@ function refreshContabilidad() {
     elB.className = 'stat ' + (b >= 0 ? 'balance' : 'expense');
   }
   try {
-    setPctEl('contIncomePct', 'contI', i);
-    setPctEl('contExpensePct', 'contE', e);
-    setPctEl('contBalancePct', 'contB', b);
-    const snap = ensurePctSnap();
-    if (snap.contI == null && snap.contE == null && snap.contB == null) {
-      commitPctSnap({ contI: i, contE: e, contB: b });
-    }
+    setPctEl('contIncomePct', 'cont', 'i', i);
+    setPctEl('contExpensePct', 'cont', 'e', e);
+    setPctEl('contBalancePct', 'cont', 'b', b);
+    setPctEl('homeIncomePct', 'cont', 'i', i);
+    setPctEl('homeExpensePct', 'cont', 'e', e);
+    setPctEl('homeBalancePct', 'cont', 'b', b);
   } catch (ePct) {}
   try { fillContBreakdownUI('cont', yearData); } catch (err) {}
   syncContCajasInputs();
@@ -10827,31 +10702,24 @@ function viewInsDetail(id) {
   modal.classList.add('open');
 }
 function waInsObs(id) {
-  (async function () {
-    const i = (insumos || []).find(function (x) { return x.id === id; });
-    if (!i) return;
-    const name = i.producto || i.name || 'Insumo';
-    const obs = (i.obs || i.observaciones || '').trim();
-    const fam = (i.familia || i.familiaOlfativa || '').trim();
-    const cod = (i.codigo || i.codigoId || '').trim();
-    let text = '*' + name + '*';
-    if (cod) text += '\n🪪 ' + cod;
-    if (fam) text += '\n👃 ' + fam;
-    if (obs) text += '\n\n' + obs;
-    const files = [];
-    const img = normImgUrl(i.img || i.link || i.imagen || '');
-    const ficha = normImgUrl(i.fichaTecnica || i.ficha || '');
-    if (img) {
-      const f = await urlToShareFile(img, (cod || 'insumo') + '.jpg');
-      if (f) files.push(f);
-    }
-    if (ficha && ficha !== img) {
-      const f2 = await urlToShareFile(ficha, (cod || 'insumo') + '-ficha.jpg');
-      if (f2) files.push(f2);
-    }
-    if (!files.length && !obs) return toast('Sin imagen ni observaciones para enviar');
-    await shareWithFiles(name, text, files, '');
-  })().catch(function (e) { console.warn(e); toast('No se pudo compartir'); });
+  const i = (insumos || []).find(x => +x.id === +id);
+  if (!i) return;
+  const obs = (i.obs || '').trim();
+  const und = i.cat === 'quimico' ? 'g' : 'ud';
+  const name = i.producto || 'Insumo';
+  const cod = (i.codigo || '').trim();
+  const lines = ['*' + name + '* (' + und + ')'];
+  if (cod) lines.push('🪪 ' + cod);
+  lines.push('Precio base: $ ' + formatMoneyInput(i.precio) + ' / ' + und);
+  if (obs) lines.push('', obs);
+  const text = lines.join('\n');
+  const urls = [];
+  const img = normImgUrl(i.img || '');
+  const ficha = normImgUrl(i.fichaTecnica || '');
+  if (img) urls.push(img);
+  if (ficha && ficha !== img) urls.push(ficha);
+  if (!obs && !urls.length) return toast('Sin observaciones ni imágenes para enviar');
+  shareTextAndImages(name, text, urls);
 }
 
 function renderInsumos() {
@@ -11846,24 +11714,108 @@ function ensureFx() {
 }
 
 
+/* ===== Compartir texto + imagen(es) (solo Stock / Insumos) ===== */
+async function fetchImageFile(url, nameBase) {
+  try {
+    if (!url || String(url).indexOf('http') !== 0) return null;
+    const res = await fetch(url, { mode: 'cors', cache: 'no-store' });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    if (!blob || !blob.size) return null;
+    let type = blob.type || 'image/jpeg';
+    if (type.indexOf('image/') !== 0) type = 'image/jpeg';
+    const ext = (type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+    const safe = String(nameBase || 'img').replace(/[^\w\-]+/g, '_').slice(0, 40) || 'img';
+    return new File([blob], safe + '.' + ext, { type: type });
+  } catch (e) { return null; }
+}
+async function shareTextAndImages(title, text, urls) {
+  const list = (urls || []).map(u => String(u || '').trim()).filter(u => u.indexOf('http') === 0);
+  const files = [];
+  for (let i = 0; i < list.length; i++) {
+    const f = await fetchImageFile(list[i], (title || 'img') + '_' + (i + 1));
+    if (f) files.push(f);
+  }
+  const payloadText = text + (list.length ? ('\n\n' + list.join('\n')) : '');
+  try {
+    if (files.length && navigator.canShare && navigator.canShare({ files: files })) {
+      await navigator.share({ title: title || 'Compartir', text: text, files: files });
+      return true;
+    }
+  } catch (e) {
+    if (e && e.name === 'AbortError') return true;
+  }
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: title || 'Compartir', text: payloadText });
+      return true;
+    }
+  } catch (e2) {
+    if (e2 && e2.name === 'AbortError') return true;
+  }
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(payloadText);
+      toast('Texto e imágenes (links) copiados');
+      return true;
+    }
+  } catch (e3) {}
+  window.open('https://wa.me/?text=' + encodeURIComponent(payloadText), '_blank');
+  return true;
+}
+
+/* ===== Indicadores % persistentes (sobreviven al salir) ===== */
+
+function persistPctSnapSoft() {
+  try {
+    if (settings && settings.pctSnap)
+      localStorage.setItem('pctSnap', JSON.stringify(settings.pctSnap));
+  } catch (e) {}
+}
+function loadPctSnapSoft() {
+  try {
+    ensurePctSnap();
+    const raw = localStorage.getItem('pctSnap');
+    if (!raw) return;
+    const o = JSON.parse(raw);
+    if (o && typeof o === 'object') {
+      // merge without wiping newer in-memory
+      settings.pctSnap = Object.assign({}, o, settings.pctSnap || {});
+      if (o.months) settings.pctSnap.months = Object.assign({}, o.months, (settings.pctSnap && settings.pctSnap.months) || {});
+    }
+  } catch (e) {}
+}
 function ensurePctSnap() {
+  if (!settings || typeof settings !== 'object') return null;
   if (!settings.pctSnap || typeof settings.pctSnap !== 'object') settings.pctSnap = {};
+  if (!settings.pctSnap.months || typeof settings.pctSnap.months !== 'object') settings.pctSnap.months = {};
   return settings.pctSnap;
 }
-/** Muestra badge vs snapshot guardado (no reinicia al renderizar). */
-function setPctEl(id, snapKey, cur) {
-  const el = document.getElementById(id);
-  if (!el) return;
+/** Actualiza last/prev solo si el valor cambió; devuelve HTML del badge */
+function pctBadgePersist(bucket, key, cur) {
+  cur = Math.round((Number(cur) || 0) * 100) / 100;
   const snap = ensurePctSnap();
-  const prev = Number(snap[snapKey]);
-  const base = isFinite(prev) ? prev : 0;
-  el.innerHTML = typeof fmtPctBadge === 'function' ? fmtPctBadge(base, cur) : '→ 0.00%';
+  if (!snap) return (typeof fmtPctBadge === 'function' ? fmtPctBadge(0, cur) : '→ 0.00%');
+  if (!snap[bucket] || typeof snap[bucket] !== 'object') snap[bucket] = {};
+  let slot = snap[bucket][key];
+  if (!slot || typeof slot !== 'object') {
+    slot = { last: cur, prev: cur };
+    snap[bucket][key] = slot;
+  } else {
+    const last = Math.round((Number(slot.last) || 0) * 100) / 100;
+    if (Math.abs(last - cur) > 0.009) {
+      slot.prev = last;
+      slot.last = cur;
+    } else {
+      slot.last = cur;
+    }
+  }
+  return (typeof fmtPctBadge === 'function' ? fmtPctBadge(slot.prev, slot.last) : '→ 0.00%');
 }
-/** Actualiza baseline persistente (llamar tras guardar datos reales). */
-function commitPctSnap(partial) {
-  const snap = ensurePctSnap();
-  Object.keys(partial || {}).forEach(function (k) { snap[k] = Number(partial[k]) || 0; });
-  try { autoSave(); } catch (e) {}
+function setPctEl(id, bucket, key, cur) {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = pctBadgePersist(bucket, key, cur);
+  try { persistPctSnapSoft(); } catch (e) {}
 }
 
 function fmtPctBadge(prev, cur) {
@@ -11924,19 +11876,14 @@ function fxCollectEditList() {
   const rows = document.querySelectorAll('#fxEditList .fx-edit-row');
   const out = [];
   rows.forEach(function (row, i) {
-    const prev = settings.fx.rates[i] || {};
     out.push({
-      ...prev,
-      id: prev.id || (Date.now() + i),
+      ...(settings.fx.rates[i] || {}),
+      id: (settings.fx.rates[i] && settings.fx.rates[i].id) || (Date.now() + i),
       emoji: (row.querySelector('.fx-e-emoji') || {}).value || '💱',
       code: ((row.querySelector('.fx-e-code') || {}).value || '').trim().toUpperCase(),
       name: ((row.querySelector('.fx-e-name') || {}).value || '').trim(),
       rate: parseMoney((row.querySelector('.fx-e-rate') || {}).value),
-      apiUrl: ((row.querySelector('.fx-e-api') || {}).value || '').trim(),
-      // Persistir indicadores entre sesiones
-      previousRate: Number(prev.previousRate) || 0,
-      changePct: Number(prev.changePct) || 0,
-      direction: prev.direction || 'same'
+      apiUrl: ((row.querySelector('.fx-e-api') || {}).value || '').trim()
     });
   });
   settings.fx.rates = out.filter(function (r) { return r.code; });
@@ -12245,6 +12192,7 @@ document.addEventListener('toggle', function (ev) {
   }
 }, true);
 
+try { loadPctSnapSoft(); } catch (e) {}
 try { bindFxUI(); } catch (e) {}
 try { closeAllCollapsesOnBoot(); } catch (e) {}
 try {
