@@ -3682,9 +3682,13 @@ function loadFromObj(obj) {
     empresas: { atcb, perfumes },
     fx: (s0.fx && typeof s0.fx === 'object' && Array.isArray(s0.fx.rates))
       ? { rates: s0.fx.rates, userSet: true }
-      : undefined
+      : undefined,
+    // Indicadores % (contab/cajas/meses) — no tocar tasas fx
+    pctSnap: (s0.pctSnap && typeof s0.pctSnap === 'object') ? s0.pctSnap : {}
   };
   try { ensureFx(); } catch (eFx) {}
+  try { loadPctSnapSoft(); } catch (ePs) {}
+  try { ensurePctSnap(); } catch (ePs2) {}
   activeEmpresa = (obj.activeEmpresa === EMPRESA_PERFUMES || obj.activeEmpresa === 'perfumes')
     ? EMPRESA_PERFUMES : EMPRESA_ATCB;
   products = (obj.products || []).map(p => {
@@ -11774,15 +11778,33 @@ function persistPctSnapSoft() {
 }
 function loadPctSnapSoft() {
   try {
-    ensurePctSnap();
+    if (!settings || typeof settings !== 'object') return;
+    if (!settings.pctSnap || typeof settings.pctSnap !== 'object') settings.pctSnap = {};
     const raw = localStorage.getItem('pctSnap');
     if (!raw) return;
     const o = JSON.parse(raw);
-    if (o && typeof o === 'object') {
-      // merge without wiping newer in-memory
-      settings.pctSnap = Object.assign({}, o, settings.pctSnap || {});
-      if (o.months) settings.pctSnap.months = Object.assign({}, o.months, (settings.pctSnap && settings.pctSnap.months) || {});
+    if (!o || typeof o !== 'object') return;
+    // Fusionar: lo del archivo gana si tiene last/prev; si el slot no existe, usar localStorage
+    function mergeBucket(dst, src) {
+      if (!src || typeof src !== 'object') return dst || {};
+      dst = dst && typeof dst === 'object' ? dst : {};
+      Object.keys(src).forEach(function (k) {
+        if (k === 'months') return;
+        const s = src[k], d = dst[k];
+        if (!s || typeof s !== 'object') return;
+        if (!d || typeof d !== 'object') { dst[k] = { last: s.last, prev: s.prev }; return; }
+        // Preferir el que tenga prev distinto de last (hay historial de cambio)
+        const sHas = Math.abs((+s.prev || 0) - (+s.last || 0)) > 0.009;
+        const dHas = Math.abs((+d.prev || 0) - (+d.last || 0)) > 0.009;
+        if (sHas && !dHas) dst[k] = { last: s.last, prev: s.prev };
+        else if (!d.last && s.last) dst[k] = { last: s.last, prev: s.prev };
+      });
+      return dst;
     }
+    ['cont', 'caja'].forEach(function (b) {
+      settings.pctSnap[b] = mergeBucket(settings.pctSnap[b], o[b]);
+    });
+    settings.pctSnap.months = mergeBucket(settings.pctSnap.months, o.months);
   } catch (e) {}
 }
 function ensurePctSnap() {
@@ -11816,17 +11838,21 @@ function setPctEl(id, bucket, key, cur) {
   const el = document.getElementById(id);
   if (el) el.innerHTML = pctBadgePersist(bucket, key, cur);
   try { persistPctSnapSoft(); } catch (e) {}
+  try { if (typeof dirty !== 'undefined') dirty = true; } catch (e2) {}
 }
 
 function fmtPctBadge(prev, cur) {
   prev = Number(prev) || 0;
   cur = Number(cur) || 0;
   var pct = 0, dir = 'same';
-  if (prev > 0) {
-    pct = Math.round(((cur - prev) / prev) * 10000) / 100;
+  if (Math.abs(prev) > 0.009) {
+    pct = Math.round(((cur - prev) / Math.abs(prev)) * 10000) / 100;
     dir = cur > prev ? 'up' : (cur < prev ? 'down' : 'same');
+  } else if (Math.abs(cur) > 0.009) {
+    dir = cur > 0 ? 'up' : 'down';
+    pct = 0;
   }
-  var color = pct > 0 ? '#35d07f' : (pct < 0 ? '#ff5c6c' : 'var(--muted)');
+  var color = dir === 'up' ? '#35d07f' : (dir === 'down' ? '#ff5c6c' : 'var(--muted)');
   var arrow = dir === 'up' ? '↑' : (dir === 'down' ? '↓' : '→');
   return '<span style="font-size:10px;color:'+color+';white-space:nowrap;margin-left:6px">'+arrow+' '+(pct>0?'+':'')+pct.toFixed(2)+'%</span>';
 }
