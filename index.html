@@ -12232,10 +12232,12 @@ document.addEventListener('toggle', function (ev) {
 
 try { loadPctSnapSoft(); } catch (e) {}
 
-/* Listas desplegables: fixed para que no las corte overflow de collapse/main */
+/* Listas desplegables: fixed liviano (sin loops ni scroll agresivo) */
 function positionOpenDropdown(drop) {
   try {
     if (!drop || !drop.classList.contains('open')) return;
+    if (drop._ddPosLock) return;
+    drop._ddPosLock = true;
     var wrap = drop.closest('.search-wrap') || drop.parentElement;
     var anchor = (wrap && wrap.querySelector('input,textarea,select')) || wrap || drop;
     var r = anchor.getBoundingClientRect();
@@ -12243,7 +12245,11 @@ function positionOpenDropdown(drop) {
     var maxH = Math.min(280, Math.max(140, window.innerHeight - r.bottom - 16));
     var openUp = (window.innerHeight - r.bottom < 160 && r.top > 200);
     if (openUp) maxH = Math.min(280, Math.max(140, r.top - 16));
-    drop.classList.add('dd-fixed');
+    // Solo estilos (no classList) para no disparar MutationObserver en bucle
+    drop.style.position = 'fixed';
+    drop.style.zIndex = '6000';
+    drop.style.right = 'auto';
+    drop.style.marginTop = '0';
     drop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 20)) + 'px';
     drop.style.width = Math.max(140, Math.min(r.width, window.innerWidth - 16)) + 'px';
     drop.style.maxHeight = maxH + 'px';
@@ -12254,13 +12260,23 @@ function positionOpenDropdown(drop) {
       drop.style.top = (r.bottom + gap) + 'px';
       drop.style.bottom = 'auto';
     }
-  } catch (e) {}
+    drop._ddPosLock = false;
+  } catch (e) {
+    try { drop._ddPosLock = false; } catch (e2) {}
+  }
 }
 function clearDropdownPos(drop) {
   try {
     if (!drop) return;
-    drop.classList.remove('dd-fixed');
-    drop.style.left = drop.style.top = drop.style.bottom = drop.style.width = drop.style.maxHeight = '';
+    drop.style.position = '';
+    drop.style.zIndex = '';
+    drop.style.left = '';
+    drop.style.top = '';
+    drop.style.bottom = '';
+    drop.style.width = '';
+    drop.style.maxHeight = '';
+    drop.style.right = '';
+    drop.style.marginTop = '';
   } catch (e) {}
 }
 function bindDropdownPositioning() {
@@ -12268,37 +12284,62 @@ function bindDropdownPositioning() {
     if (window._ddPosBound) return;
     window._ddPosBound = true;
     var obs = new MutationObserver(function (muts) {
-      muts.forEach(function (m) {
-        if (m.type !== 'attributes' || m.attributeName !== 'class') return;
+      for (var i = 0; i < muts.length; i++) {
+        var m = muts[i];
+        if (m.type !== 'attributes' || m.attributeName !== 'class') continue;
         var el = m.target;
-        if (!el || !el.classList || !el.classList.contains('dropdown')) return;
+        if (!el || !el.classList || !el.classList.contains('dropdown')) continue;
+        // Solo reaccionar al cambio de .open (no a otros estilos)
         if (el.classList.contains('open')) positionOpenDropdown(el);
         else clearDropdownPos(el);
-      });
+      }
     });
     function watch(el) {
+      if (!el || el._ddWatched) return;
+      el._ddWatched = true;
       try { obs.observe(el, { attributes: true, attributeFilter: ['class'] }); } catch (e) {}
     }
     document.querySelectorAll('.dropdown').forEach(watch);
+    // Solo nodos nuevos .dropdown (sin observar todo el DOM a lo bruto en cada tecla)
     var bodyObs = new MutationObserver(function (muts) {
-      muts.forEach(function (m) {
-        m.addedNodes && m.addedNodes.forEach(function (n) {
-          if (!n || n.nodeType !== 1) return;
+      for (var i = 0; i < muts.length; i++) {
+        var nodes = muts[i].addedNodes;
+        if (!nodes) continue;
+        for (var j = 0; j < nodes.length; j++) {
+          var n = nodes[j];
+          if (!n || n.nodeType !== 1) continue;
           if (n.classList && n.classList.contains('dropdown')) watch(n);
-          if (n.querySelectorAll) n.querySelectorAll('.dropdown').forEach(watch);
-        });
-      });
+          else if (n.querySelectorAll) {
+            var list = n.querySelectorAll('.dropdown');
+            for (var k = 0; k < list.length; k++) watch(list[k]);
+          }
+        }
+      }
     });
     try { bodyObs.observe(document.body, { childList: true, subtree: true }); } catch (e2) {}
+    var resizeT = null;
     window.addEventListener('resize', function () {
-      document.querySelectorAll('.dropdown.open').forEach(positionOpenDropdown);
+      clearTimeout(resizeT);
+      resizeT = setTimeout(function () {
+        document.querySelectorAll('.dropdown.open').forEach(positionOpenDropdown);
+      }, 100);
     }, { passive: true });
-    window.addEventListener('scroll', function () {
-      document.querySelectorAll('.dropdown.open').forEach(positionOpenDropdown);
-    }, true);
+    // Scroll solo de main/ventana, con throttle (NO capture en cada scroll de la lista)
+    var scrollT = null;
+    function onMainScroll() {
+      if (scrollT) return;
+      scrollT = setTimeout(function () {
+        scrollT = null;
+        document.querySelectorAll('.dropdown.open').forEach(positionOpenDropdown);
+      }, 50);
+    }
+    var main = document.querySelector('main');
+    if (main) main.addEventListener('scroll', onMainScroll, { passive: true });
+    window.addEventListener('scroll', onMainScroll, { passive: true });
   } catch (e) { console.warn('dd pos', e); }
 }
 try { bindDropdownPositioning(); } catch (e) {}
+
 
 
 try { bindFxUI(); } catch (e) {}
