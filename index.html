@@ -259,21 +259,13 @@ nav button.active{color:var(--accent)}
 }
 .line-item .desc{font-size:13px;font-weight:600}
 .line-item .meta{font-size:12px;color:var(--muted)}
-.search-wrap{position:relative;z-index:5}
-.search-wrap:focus-within{z-index:40}
+.search-wrap{position:relative}
 .dropdown{
-  position:absolute;left:0;right:0;top:100%;z-index:50;
-  background:var(--card2);border:1px solid var(--accent);
-  border-radius:10px;
-  max-height:min(45vh, 280px);overflow:auto;display:none;margin-top:2px;
-  box-shadow:0 10px 28px rgba(0,0,0,.55), 0 0 0 1px rgba(77,163,255,.2);
-  -webkit-overflow-scrolling:touch;
+  position:absolute;left:0;right:0;top:100%;z-index:15;
+  background:var(--card2);border:1px solid var(--border);border-radius:10px;
+  max-height:200px;overflow:auto;display:none;margin-top:2px;
 }
 .dropdown.open{display:block}
-.dropdown.dd-fixed{
-  position:fixed!important;right:auto!important;margin-top:0;
-  z-index:6000!important;
-}
 .dropdown div{padding:8px 10px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--border)}
 .dropdown div:hover,.dropdown div:active{background:var(--accent);color:#fff}
 .section-title{font-size:14px;font-weight:700;margin:0 0 6px}
@@ -380,7 +372,7 @@ nav button.active{color:var(--accent)}
 .list-card .line strong{color:var(--text);font-weight:600}
 /* Apartados: retraído = botón en relieve; desplegado = botón en uso (hundido) */
 .collapse{
-  border:1px solid var(--border);border-radius:12px;margin-bottom:8px;overflow:visible;
+  border:1px solid var(--border);border-radius:12px;margin-bottom:8px;overflow:hidden;
   background:var(--card);
   transition:box-shadow .15s ease, border-color .15s ease, transform .12s ease;
 }
@@ -454,11 +446,7 @@ nav button.active{color:var(--accent)}
 .collapse>summary::-webkit-details-marker{display:none}
 .collapse>summary::after{content:"▸";color:var(--muted);font-size:16px;transition:transform .15s ease}
 .collapse[open]>summary::after{content:"▾";color:var(--accent)}
-.collapse .body{padding:0 10px 10px;border-top:1px solid var(--border);overflow:visible}
-.collapse:not([open]){overflow:hidden}
-.collapse[open]{overflow:visible}
-.edit-panel.open{overflow-x:visible}
-.form-row,.search-wrap{overflow:visible}
+.collapse .body{padding:0 10px 10px;border-top:1px solid var(--border)}
 
 
 /* Contab: Registro | Cajas en 2 columnas en pantalla ancha */
@@ -12231,76 +12219,6 @@ document.addEventListener('toggle', function (ev) {
 }, true);
 
 try { loadPctSnapSoft(); } catch (e) {}
-
-/* Listas desplegables: fixed para que no las corte overflow de collapse/main */
-function positionOpenDropdown(drop) {
-  try {
-    if (!drop || !drop.classList.contains('open')) return;
-    var wrap = drop.closest('.search-wrap') || drop.parentElement;
-    var anchor = (wrap && wrap.querySelector('input,textarea,select')) || wrap || drop;
-    var r = anchor.getBoundingClientRect();
-    var gap = 4;
-    var maxH = Math.min(280, Math.max(140, window.innerHeight - r.bottom - 16));
-    var openUp = (window.innerHeight - r.bottom < 160 && r.top > 200);
-    if (openUp) maxH = Math.min(280, Math.max(140, r.top - 16));
-    drop.classList.add('dd-fixed');
-    drop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 20)) + 'px';
-    drop.style.width = Math.max(140, Math.min(r.width, window.innerWidth - 16)) + 'px';
-    drop.style.maxHeight = maxH + 'px';
-    if (openUp) {
-      drop.style.top = 'auto';
-      drop.style.bottom = (window.innerHeight - r.top + gap) + 'px';
-    } else {
-      drop.style.top = (r.bottom + gap) + 'px';
-      drop.style.bottom = 'auto';
-    }
-  } catch (e) {}
-}
-function clearDropdownPos(drop) {
-  try {
-    if (!drop) return;
-    drop.classList.remove('dd-fixed');
-    drop.style.left = drop.style.top = drop.style.bottom = drop.style.width = drop.style.maxHeight = '';
-  } catch (e) {}
-}
-function bindDropdownPositioning() {
-  try {
-    if (window._ddPosBound) return;
-    window._ddPosBound = true;
-    var obs = new MutationObserver(function (muts) {
-      muts.forEach(function (m) {
-        if (m.type !== 'attributes' || m.attributeName !== 'class') return;
-        var el = m.target;
-        if (!el || !el.classList || !el.classList.contains('dropdown')) return;
-        if (el.classList.contains('open')) positionOpenDropdown(el);
-        else clearDropdownPos(el);
-      });
-    });
-    function watch(el) {
-      try { obs.observe(el, { attributes: true, attributeFilter: ['class'] }); } catch (e) {}
-    }
-    document.querySelectorAll('.dropdown').forEach(watch);
-    var bodyObs = new MutationObserver(function (muts) {
-      muts.forEach(function (m) {
-        m.addedNodes && m.addedNodes.forEach(function (n) {
-          if (!n || n.nodeType !== 1) return;
-          if (n.classList && n.classList.contains('dropdown')) watch(n);
-          if (n.querySelectorAll) n.querySelectorAll('.dropdown').forEach(watch);
-        });
-      });
-    });
-    try { bodyObs.observe(document.body, { childList: true, subtree: true }); } catch (e2) {}
-    window.addEventListener('resize', function () {
-      document.querySelectorAll('.dropdown.open').forEach(positionOpenDropdown);
-    }, { passive: true });
-    window.addEventListener('scroll', function () {
-      document.querySelectorAll('.dropdown.open').forEach(positionOpenDropdown);
-    }, true);
-  } catch (e) { console.warn('dd pos', e); }
-}
-try { bindDropdownPositioning(); } catch (e) {}
-
-
 try { bindFxUI(); } catch (e) {}
 try { closeAllCollapsesOnBoot(); } catch (e) {}
 try {
