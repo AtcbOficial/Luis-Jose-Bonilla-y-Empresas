@@ -1,8 +1,14 @@
-[{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "io.github.luis_bonilla_empresas.twa",
-        "sha256_cert_fingerprints": ["83:4D:AD:6A:5B:36:31:0D:7F:08:D1:AB:D3:C5:D8:73:A3:60:58:98:A1:13:04:57:F9:03:76:10:5B:4E:0A:AC"]
-      }
-    }]
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "io.github.luis_bonilla_empresas.twa",
+      "sha256_cert_fingerprints": [
+        "CA:D5:CD:AB:3E:43:0D:92:6A:CD:DE:90:ED:CF:51:10:C4:BC:7D:4E:A1:8B:9E:DB:A3:9E:F9:9A:83:A9:CA:9B"
+      ]
+    }
+  }
+]
